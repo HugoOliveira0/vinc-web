@@ -1,6 +1,6 @@
-# V.INC Web
+# V.Inc Web
 
-O V.INC Web é uma solução de acessibilidade digital composta por uma extensão de navegador e uma plataforma web. O projeto está sendo desenvolvido como Trabalho de Conclusão de Curso do curso Técnico em Informática para Internet da Etec Pedro Ferreira Alves.
+O V.Inc Web é uma solução de acessibilidade digital composta por uma extensão de navegador e uma plataforma web. O projeto está sendo desenvolvido como Trabalho de Conclusão de Curso do curso Técnico em Informática para Internet da Etec Pedro Ferreira Alves.
 
 ## Objetivo
 
@@ -21,7 +21,7 @@ Entre os exemplos de interação previstos estão:
 
 ## Diferencial
 
-O V.INC Web não pretende substituir leitores de tela ou outras tecnologias assistivas. Sua proposta é funcionar como uma camada complementar de navegação, reunindo análise semântica, comandos multimodais e explicações contextuais em português brasileiro.
+O V.Inc Web não pretende substituir leitores de tela ou outras tecnologias assistivas. Sua proposta é funcionar como uma camada complementar de navegação, reunindo análise semântica, comandos multimodais e explicações contextuais em português brasileiro.
 
 Um exemplo de uso será a possibilidade de perguntar:
 
@@ -41,15 +41,15 @@ Responsável por analisar a página atual, construir um mapa semântico de seus 
 
 Responsável pela autenticação, documentação de uso, sincronização de preferências e histórico opcional.
 
-## Relação com o V.INC – Voz Inclusiva
+## Relação com o V.Inc – Voz Inclusiva
 
-O V.INC Web é um desdobramento do V.INC – Voz Inclusiva, aplicação desktop desenvolvida como TCC do curso Técnico em Desenvolvimento de Sistemas.
+O V.Inc Web é um desdobramento do V.Inc – Voz Inclusiva, aplicação desktop desenvolvida como TCC do curso Técnico em Desenvolvimento de Sistemas.
 
-Link do TCC V.Inc - Voz Inclusiva: https://github.com/nicolasrocha0809-png/v-inc-tcc
+Repositório do projeto [V.Inc – Voz Inclusiva](https://github.com/nicolasrocha0809-png/v-inc-tcc).
 
 Os projetos compartilham a identidade e o compromisso com a acessibilidade, mas possuem códigos-fonte, arquiteturas, objetivos, documentações e testes próprios.
 
-O V.INC – Voz Inclusiva atua sobre recursos do computador, enquanto o V.INC Web será direcionado à interpretação e à navegação de páginas da internet. O funcionamento do V.INC Web não dependerá da execução ou da modificação da aplicação original.
+O V.Inc – Voz Inclusiva atua sobre recursos do computador, enquanto o V.Inc Web será direcionado à interpretação e à navegação de páginas da internet. O funcionamento do V.Inc Web não dependerá da execução ou da modificação da aplicação original.
 
 ## Tecnologias previstas
 

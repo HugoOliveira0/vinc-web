@@ -1,0 +1,30 @@
+{
+    "manifest_version": 3,
+    "name": "V.Inc Web",
+    "description": "Extensão de acessibilidade para análise e navegação em páginas web.",
+    "version": "0.1.0",
+
+    "permissions": [
+        "sidePanel",
+        "activeTab",
+        "scripting"
+    ],
+
+    "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+    ],
+
+    "action": {
+        "default_title": "Abrir V.Inc Web"
+    },
+
+    "background": {
+        "service_worker": "service-worker.js"
+    },
+
+    "side_panel":{
+        "default_path": "index.html"
+    }
+
+}
