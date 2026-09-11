@@ -18,25 +18,38 @@ function App() {
 
       const [{ result: pageData }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: () => ({
-          title: document.title,
+        func: () => {
+          const headingElements = [
+            ...document.querySelectorAll('h1, h2, h3, h4, h5, h6')
+          ]
 
-          headings: document.querySelectorAll(
-            'h1, h2, h3, h4, h5, h6'
-          ).length,
+          return {
+            title: document.title,
 
-          links: document.querySelectorAll('a').length,
+            headings: headingElements.length,
 
-          buttons: document.querySelectorAll(
-            'button, [role="button"]'
-          ).length,
+            headingItems: headingElements
+              .map((heading, index) => ({
+                id: index,
+                level: heading.tagName.toLowerCase(),
+                text: heading.innerText.trim()
+              }))
+              .filter((heading) => heading.text)
+              .slice(0, 20),
 
-          fields: document.querySelectorAll(
-            'input, textarea, select'
-          ).length,
+            links: document.querySelectorAll('a').length,
 
-          images: document.querySelectorAll('img').length
-        })
+            buttons: document.querySelectorAll(
+              'button, [role="button"]'
+            ).length,
+
+            fields: document.querySelectorAll(
+              'input, textarea, select'
+            ).length,
+
+            images: document.querySelectorAll('img').length
+          }
+        }
       })
 
       console.log('Análise da página:', pageData)
@@ -75,6 +88,21 @@ function App() {
             <li>Campos: {analysis.fields}</li>
             <li>Imagens: {analysis.images}</li>
           </ul>
+
+          <h3>Títulos encontrados</h3>
+
+          {analysis.headingItems.length > 0 ? (
+            <ol>
+              {analysis.headingItems.map((heading) => (
+                <li key={heading.id}>
+                  <strong>{heading.level.toUpperCase()}:</strong>{' '}
+                  {heading.text}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>Nenhum título com texto foi encontrado.</p>
+          )}
         </section>
       )}
     </main>
