@@ -2,8 +2,12 @@ import { useState } from 'react'
 
 function App() {
   const [status, setStatus] = useState('Aguardando análise...')
+  const [analysis, setAnalysis] = useState(null)
 
   const handleAnalyze = async () => {
+    // Limpando resultado anterior
+    setAnalysis(null)
+
     setStatus('Analisando página...')
 
     try {
@@ -12,15 +16,35 @@ function App() {
         currentWindow: true
       })
 
-      const [{ result: pageTitle }] = await chrome.scripting.executeScript({
+      const [{ result: pageData }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: () => document.title
+        func: () => ({
+          title: document.title,
+
+          headings: document.querySelectorAll(
+            'h1, h2, h3, h4, h5, h6'
+          ).length,
+
+          links: document.querySelectorAll('a').length,
+
+          buttons: document.querySelectorAll(
+            'button, [role="button"]'
+          ).length,
+
+          fields: document.querySelectorAll(
+            'input, textarea, select'
+          ).length,
+
+          images: document.querySelectorAll('img').length
+        })
       })
 
-      console.log('Título obtido da página:', pageTitle)
-      setStatus(`Página atual: ${pageTitle}`)
+      console.log('Análise da página:', pageData)
+      setAnalysis(pageData)
+      setStatus('Análise concluída.')
 
     } catch (error) {
+      setAnalysis(null)
       console.error('Erro ao analisar a página:', error)
       setStatus('Não foi possível analisar a página.')
     }
@@ -35,6 +59,24 @@ function App() {
       <button type="button" onClick={handleAnalyze}>Analisar página</button>
 
       <p role="status">{status}</p>
+
+      {analysis && (
+        <section aria-labelledby="analysis-title">
+          <h2 id="analysis-title">Resumo da página</h2>
+
+          <p>
+            <strong>Página:</strong> {analysis.title || 'Sem título'}
+          </p>
+
+          <ul>
+            <li>Títulos: {analysis.headings}</li>
+            <li>Links: {analysis.links}</li>
+            <li>Botões: {analysis.buttons}</li>
+            <li>Campos: {analysis.fields}</li>
+            <li>Imagens: {analysis.images}</li>
+          </ul>
+        </section>
+      )}
     </main>
   )
 }
