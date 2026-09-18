@@ -19,9 +19,45 @@ function App() {
       const [{ result: pageData }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => {
-          const headingElements = [
+          const allHeadings = [
             ...document.querySelectorAll('h1, h2, h3, h4, h5, h6')
           ]
+
+          const isVisible = (element) => {
+            const style = window.getComputedStyle(element)
+            const rect = element.getBoundingClientRect()
+
+            const isVisuallyClipped =
+              (
+                style.clip !== 'auto' ||
+                style.clipPath !== 'none'
+              ) &&
+              rect.width <= 1 &&
+              rect.height <= 1
+
+            return (
+              !element.hidden &&
+              !element.closest('[hidden], [aria-hidden="true"]') &&
+              style.display !== 'none' &&
+              style.visibility !== 'hidden' &&
+              Number(style.opacity) !== 0 &&
+              rect.width > 0 &&
+              rect.height > 0 &&
+              !isVisuallyClipped
+            )
+          }
+
+          allHeadings.forEach((heading) => {
+            heading.removeAttribute('data-vinc-heading-id')
+          })
+
+          const headingElements = allHeadings.filter((heading) => {
+            return isVisible(heading) && heading.innerText.trim()
+          })
+
+          headingElements.forEach((heading, index) => {
+            heading.dataset.vincHeadingId = `vinc-heading-${index}`
+          })
 
           return {
             title: document.title,
@@ -29,13 +65,12 @@ function App() {
             headings: headingElements.length,
 
             headingItems: headingElements
-              .map((heading, index) => ({
-                id: index,
+              .slice(0, 20)
+              .map((heading) => ({
+                id: heading.dataset.vincHeadingId,
                 level: heading.tagName.toLowerCase(),
                 text: heading.innerText.trim()
-              }))
-              .filter((heading) => heading.text)
-              .slice(0, 20),
+              })),
 
             links: document.querySelectorAll('a').length,
 
@@ -60,6 +95,48 @@ function App() {
       setAnalysis(null)
       console.error('Erro ao analisar a página:', error)
       setStatus('Não foi possível analisar a página.')
+    }
+  }
+
+  const handleHeadingClick = async (headingId) => {
+    setStatus('Localizando título...')
+
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      const [{ result: found }] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        args: [headingId],
+
+        func: (id) => {
+          const selectedHeading = document.querySelector(
+            `[data-vinc-heading-id="${id}"]`
+          )
+
+          if (!selectedHeading) {
+            return false
+          }
+
+          selectedHeading.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+
+          return true
+        }
+      })
+
+      if (found) {
+        setStatus('Título localizado na página.')
+      } else {
+        setStatus('O título não existe mais na página.')
+      }
+    } catch (error) {
+      console.error('Erro ao localizar título:', error)
+      setStatus('Não foi possível localizar o título.')
     }
   }
 
@@ -95,8 +172,13 @@ function App() {
             <ol>
               {analysis.headingItems.map((heading) => (
                 <li key={heading.id}>
-                  <strong>{heading.level.toUpperCase()}:</strong>{' '}
-                  {heading.text}
+                  <button
+                    type="button"
+                    onClick={() => handleHeadingClick(heading.id)}
+                  >
+                    <strong>{heading.level.toUpperCase()}:</strong>{' '}
+                    {heading.text}
+                  </button>
                 </li>
               ))}
             </ol>
