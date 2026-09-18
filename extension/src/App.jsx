@@ -127,7 +127,10 @@ function App() {
       })
 
       console.log('Análise da página:', pageData)
-      setAnalysis(pageData)
+      setAnalysis({
+        ...pageData,
+        tabId: tab.id
+      })
       setStatus('Análise concluída.')
 
     } catch (error) {
@@ -145,6 +148,11 @@ function App() {
         active: true,
         currentWindow: true
       })
+
+      if (tab.id !== analysis.tabId){
+        setStatus('A página analisada não é mais a aba ativa. Analise novamente.')
+         return
+      }
 
       const [{ result: found }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -187,6 +195,11 @@ function App() {
         active: true,
         currentWindow: true
       })
+
+      if (tab.id !== analysis.tabId) {
+        setStatus('A página analisada não é mais a aba ativa. Analise novamente.')
+        return
+      }
 
       const [{ result: found }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
