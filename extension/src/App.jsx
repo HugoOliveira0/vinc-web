@@ -1,5 +1,11 @@
 import { useState } from 'react'
 
+const truncateText = (text, maxLength = 50) => {
+  return text.length > maxLength
+    ? `${text.slice(0, maxLength)}…`
+    : text
+}
+
 function App() {
   const [status, setStatus] = useState('Aguardando análise...')
   const [analysis, setAnalysis] = useState(null)
@@ -59,6 +65,31 @@ function App() {
             heading.dataset.vincHeadingId = `vinc-heading-${index}`
           })
 
+          const allLinks = [
+            ...document.querySelectorAll('a[href]')
+          ]
+
+          allLinks.forEach((link) => {
+            link.removeAttribute('data-vinc-link-id')
+          })
+
+          const getLinkText = (link) => {
+            return (
+              link.innerText.trim() ||
+              link.getAttribute('aria-label')?.trim() ||
+              link.getAttribute('title')?.trim() ||
+              'Link sem descrição'
+            )
+          }
+
+          const linkElements = allLinks.filter((link) => {
+            return isVisible(link) && getLinkText(link)
+          })
+
+          linkElements.forEach((link, index) => {
+            link.dataset.vincLinkId = `vinc-link-${index}`
+          })
+
           return {
             title: document.title,
 
@@ -72,7 +103,15 @@ function App() {
                 text: heading.innerText.trim()
               })),
 
-            links: document.querySelectorAll('a').length,
+            links: linkElements.length,
+
+            linkItems: linkElements
+              .slice(0, 20)
+              .map((link) => ({
+                id: link.dataset.vincLinkId,
+                text: getLinkText(link),
+                url: link.href
+              })),
 
             buttons: document.querySelectorAll(
               'button, [role="button"]'
@@ -140,6 +179,52 @@ function App() {
     }
   }
 
+  const handleLinkClick = async (linkId) => {
+    setStatus('Localizando link...')
+
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      const [{ result: found }] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        args: [linkId],
+
+        func: (id) => {
+          const selectedLink = document.querySelector(
+            `[data-vinc-link-id="${id}"]`
+          )
+
+          if (!selectedLink) {
+            return false
+          }
+
+          selectedLink.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+
+          selectedLink.focus({
+            preventScroll: true
+          })
+
+          return true
+        }
+      })
+
+      if (found) {
+        setStatus('Link localizado na página.')
+      } else {
+        setStatus('O link não existe mais na página.')
+      }
+    } catch (error) {
+      console.error('Erro ao localizar link:', error)
+      setStatus('Não foi possível localizar o link.')
+    }
+  }
+
   return(
     <main>
       <h1>V.Inc Web</h1>
@@ -185,6 +270,29 @@ function App() {
           ) : (
             <p>Nenhum título com texto foi encontrado.</p>
           )}
+
+
+          <h3>Links encontrados</h3>
+
+          {analysis.linkItems.length > 0 ? (
+            <ol>
+              {analysis.linkItems.map((link) => (
+                <li key={link.id}>
+                  <button
+                    type="button"
+                    title={link.text}
+                    aria-label={`Localizar link: ${link.text}`}
+                    onClick={() => handleLinkClick(link.id)}
+                  >
+                    {truncateText(link.text)}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>Nenhum link visível foi encontrado.</p>
+          )}
+
         </section>
       )}
     </main>
