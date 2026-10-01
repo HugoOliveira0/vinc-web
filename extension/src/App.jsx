@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import vincLogo from './assets/vinc_logo.svg'
 import { truncateText } from './utils/text'
 import { analyzePage } from './services/pageAnalysis'
 import {
@@ -124,24 +125,44 @@ function App() {
   }
 
   return (
-    <main>
-      <h1>V.Inc Web</h1>
+    <main className="app">
+      <header className="brand-header">
+        <img
+          className="brand-logo"
+          src={vincLogo}
+          alt=""
+          aria-hidden="true"
+        />
 
-      <p>Extensão de acessibilidade para análise e navegação em páginas web.</p>
+        <div>
+          <h1>V.Inc Web</h1>
+          <p className="brand-subtitle">VOZ INCLUSIVA</p>
+        </div>
+      </header>
 
-      <button type="button" onClick={handleAnalyze}>Analisar página</button>
+      <p className="app-description">
+        Extensão de acessibilidade para análise e navegação em páginas web.
+      </p>
 
-      <p role="status">{status}</p>
+      <button
+        className="analyze-button"
+        type="button"
+        onClick={handleAnalyze}
+      >
+        Analisar página
+      </button>
+
+      <p className="status-message" role="status">{status}</p>
 
       {analysis && (
-        <section aria-labelledby="analysis-title">
+        <section className="analysis" aria-labelledby="analysis-title">
           <h2 id="analysis-title">Resumo da página</h2>
 
-          <p>
+          <p className="page-title">
             <strong>Página:</strong> {analysis.title || 'Sem título'}
           </p>
 
-          <ul>
+          <ul className="summary-list">
             <li>Títulos: {analysis.headings}</li>
             <li>Links: {analysis.links}</li>
             <li>Botões: {analysis.buttons}</li>
@@ -153,10 +174,11 @@ function App() {
           <h3>Títulos encontrados</h3>
 
           {analysis.headingItems.length > 0 ? (
-            <ol>
+            <ol className="result-list">
               {analysis.headingItems.map((heading) => (
                 <li key={heading.id}>
                   <button
+                    className="result-button"
                     type="button"
                     onClick={() => handleHeadingClick(heading.id)}
                   >
@@ -174,10 +196,11 @@ function App() {
           <h3>Links encontrados</h3>
 
           {analysis.linkItems.length > 0 ? (
-            <ol>
+            <ol className="result-list">
               {analysis.linkItems.map((link) => (
                 <li key={link.id}>
                   <button
+                    className="result-button"
                     type="button"
                     title={link.text}
                     aria-label={`Localizar link: ${link.text}`}
@@ -196,10 +219,11 @@ function App() {
           <h3>Botões encontrados</h3>
 
           {analysis.buttonItems.length > 0 ? (
-            <ol>
+            <ol className="result-list">
               {analysis.buttonItems.map((button) => (
                 <li key={button.id}>
                   <button
+                    className="result-button"
                     type="button"
                     title={button.text}
                     aria-label={`Localizar botão: ${button.text}`}
