@@ -3,7 +3,8 @@ import { truncateText } from './utils/text'
 import { analyzePage } from './services/pageAnalysis'
 import {
   locateHeading,
-  locateLink
+  locateLink,
+  locateButton
 } from './services/pageNavigation'
 
 function App() {
@@ -92,6 +93,36 @@ function App() {
     }
   }
 
+
+  const handleButtonClick = async (buttonId) => {
+    setStatus('Localizando botão...')
+
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      if (tab.id !== analysis.tabId) {
+        setStatus(
+          'A página analisada não é mais a aba ativa. Analise novamente.'
+        )
+        return
+      }
+
+      const found = await locateButton(tab.id, buttonId)
+
+      if (found) {
+        setStatus('Botão localizado na página.')
+      } else {
+        setStatus('O botão não existe mais na página.')
+      }
+    } catch (error) {
+      console.error('Erro ao localizar botão:', error)
+      setStatus('Não foi possível localizar o botão.')
+    }
+  }
+
   return (
     <main>
       <h1>V.Inc Web</h1>
@@ -117,6 +148,7 @@ function App() {
             <li>Campos: {analysis.fields}</li>
             <li>Imagens: {analysis.images}</li>
           </ul>
+
 
           <h3>Títulos encontrados</h3>
 
@@ -158,6 +190,28 @@ function App() {
             </ol>
           ) : (
             <p>Nenhum link visível foi encontrado.</p>
+          )}
+
+
+          <h3>Botões encontrados</h3>
+
+          {analysis.buttonItems.length > 0 ? (
+            <ol>
+              {analysis.buttonItems.map((button) => (
+                <li key={button.id}>
+                  <button
+                    type="button"
+                    title={button.text}
+                    aria-label={`Localizar botão: ${button.text}`}
+                    onClick={() => handleButtonClick(button.id)}
+                  >
+                    {truncateText(button.text)}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>Nenhum botão visível foi encontrado.</p>
           )}
 
         </section>

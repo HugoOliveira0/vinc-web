@@ -64,6 +64,34 @@ const collectPageData = () => {
         link.dataset.vincLinkId = `vinc-link-${index}`
     })
 
+    const allButtons = [
+        ...document.querySelectorAll(
+            'button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]'
+        )
+    ]
+
+    allButtons.forEach((button) => {
+        button.removeAttribute('data-vinc-button-id')
+    })
+
+    const getButtonText = (button) => {
+        return (
+            button.innerText?.trim() ||
+            button.getAttribute('aria-label')?.trim() ||
+            button.getAttribute('title')?.trim() ||
+            button.value?.trim() ||
+            'Botão sem descrição'
+        )
+    }
+
+    const buttonElements = allButtons.filter((button) => {
+        return isVisible(button)
+    })
+
+    buttonElements.forEach((button, index) => {
+        button.dataset.vincButtonId = `vinc-button-${index}`
+    })
+
     return {
         title: document.title,
 
@@ -87,9 +115,14 @@ const collectPageData = () => {
                 url: link.href
             })),
 
-        buttons: document.querySelectorAll(
-            'button, [role="button"]'
-        ).length,
+        buttons: buttonElements.length,
+
+        buttonItems: buttonElements
+            .slice(0, 20)
+            .map((button) => ({
+                id: button.dataset.vincButtonId,
+                text: getButtonText(button)
+            })),
 
         fields: document.querySelectorAll(
             'input, textarea, select'
