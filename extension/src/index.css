@@ -222,6 +222,14 @@ button {
   background: var(--surface-hover);
 }
 
+.result-meta {
+  display: block;
+  margin-top: 3px;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
 button:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;

@@ -5,7 +5,8 @@ import { analyzePage } from './services/pageAnalysis'
 import {
   locateHeading,
   locateLink,
-  locateButton
+  locateButton,
+  locateField
 } from './services/pageNavigation'
 
 function App() {
@@ -124,6 +125,35 @@ function App() {
     }
   }
 
+  const handleFieldClick = async (fieldId) => {
+    setStatus('Localizando campo...')
+
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      if (tab.id !== analysis.tabId) {
+        setStatus(
+          'A página analisada não é mais a aba ativa. Analise novamente.'
+        )
+        return
+      }
+
+      const found = await locateField(tab.id, fieldId)
+
+      if (found) {
+        setStatus('Campo localizado na página.')
+      } else {
+        setStatus('O campo não existe mais na página.')
+      }
+    } catch (error) {
+      console.error('Erro ao localizar campo:', error)
+      setStatus('Não foi possível localizar o campo.')
+    }
+  }
+
   return (
     <main className="app">
       <header className="brand-header">
@@ -236,6 +266,37 @@ function App() {
             </ol>
           ) : (
             <p>Nenhum botão visível foi encontrado.</p>
+          )}
+
+          <h3>Campos encontrados</h3>
+
+          {analysis.fieldItems.length > 0 ? (
+            <ol className="result-list">
+              {analysis.fieldItems.map((field) => {
+                const fieldDetails = [
+                  field.type,
+                  field.required && 'obrigatório',
+                  field.disabled && 'desabilitado'
+                ].filter(Boolean).join(' · ')
+
+                return (
+                  <li key={field.id}>
+                    <button
+                      className="result-button"
+                      type="button"
+                      title={field.label}
+                      aria-label={`Localizar campo: ${field.label}. ${fieldDetails}`}
+                      onClick={() => handleFieldClick(field.id)}
+                    >
+                      <strong>{truncateText(field.label)}</strong>
+                      <span className="result-meta">{fieldDetails}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <p>Nenhum campo visível foi encontrado.</p>
           )}
 
         </section>

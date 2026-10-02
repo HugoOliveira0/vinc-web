@@ -57,3 +57,12 @@ export const locateButton = (tabId, buttonId) => {
         true
     )
 }
+
+export const locateField = (tabId, fieldId) => {
+    return locateElement(
+        tabId,
+        'data-vinc-field-id',
+        fieldId,
+        true
+    )
+}

@@ -92,6 +92,56 @@ const collectPageData = () => {
         button.dataset.vincButtonId = `vinc-button-${index}`
     })
 
+    const allFields = [
+        ...document.querySelectorAll(
+            'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), textarea, select'
+        )
+    ]
+
+    allFields.forEach((field) => {
+        field.removeAttribute('data-vinc-field-id')
+    })
+
+    const getFieldLabel = (field) => {
+        const labelText = [...(field.labels || [])]
+            .map((label) => label.innerText.trim())
+            .filter(Boolean)
+            .join(' ')
+
+        const labelledByText = (field.getAttribute('aria-labelledby') || '')
+            .split(/\s+/)
+            .map((id) => document.getElementById(id)?.innerText.trim())
+            .filter(Boolean)
+            .join(' ')
+
+        return (
+            labelText ||
+            field.getAttribute('aria-label')?.trim() ||
+            labelledByText ||
+            field.getAttribute('placeholder')?.trim() ||
+            field.getAttribute('name')?.trim() ||
+            'Campo sem descrição'
+        )
+    }
+
+    const getFieldType = (field) => {
+        const tagName = field.tagName.toLowerCase()
+
+        if (tagName === 'select' || tagName === 'textarea') {
+            return tagName
+        }
+
+        return field.type || 'text'
+    }
+
+    const fieldElements = allFields.filter((field) => {
+        return isVisible(field)
+    })
+
+    fieldElements.forEach((field, index) => {
+        field.dataset.vincFieldId = `vinc-field-${index}`
+    })
+
     return {
         title: document.title,
 
@@ -124,9 +174,17 @@ const collectPageData = () => {
                 text: getButtonText(button)
             })),
 
-        fields: document.querySelectorAll(
-            'input, textarea, select'
-        ).length,
+        fields: fieldElements.length,
+
+        fieldItems: fieldElements
+            .slice(0, 20)
+            .map((field) => ({
+                id: field.dataset.vincFieldId,
+                label: getFieldLabel(field),
+                type: getFieldType(field),
+                required: field.required,
+                disabled: field.disabled
+            })),
 
         images: document.querySelectorAll('img').length
     }
