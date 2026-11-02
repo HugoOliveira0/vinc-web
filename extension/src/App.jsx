@@ -6,7 +6,8 @@ import {
   locateHeading,
   locateLink,
   locateButton,
-  locateField
+  locateField,
+  locateImage
 } from './services/pageNavigation'
 
 function App() {
@@ -154,6 +155,37 @@ function App() {
     }
   }
 
+
+  const handleImageClick = async (imageId) => {
+    setStatus('Localizando imagem...')
+
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      if (tab.id !== analysis.tabId) {
+        setStatus(
+          'A página analisada não é mais a aba ativa. Analise novamente.'
+        )
+        return
+      }
+
+      const found = await locateImage(tab.id, imageId)
+
+      if (found) {
+        setStatus('Imagem localizada na página.')
+      } else {
+        setStatus('A imagem não existe mais na página.')
+      }
+    } catch (error) {
+      console.error('Erro ao localizar imagem:', error)
+      setStatus('Não foi possível localizar a imagem.')
+    }
+  }
+
+
   return (
     <main className="app">
       <header className="brand-header">
@@ -297,6 +329,44 @@ function App() {
             </ol>
           ) : (
             <p>Nenhum campo visível foi encontrado.</p>
+          )}
+
+
+          <h3>Imagens encontradas</h3>
+
+          {analysis.imageItems.length > 0 ? (
+            <ol className="result-list">
+              {analysis.imageItems.map((image) => {
+                const imageDetails = [
+                  image.decorative
+                    ? 'decorativa'
+                    : image.hasAlt
+                      ? 'com descrição'
+                      : 'sem descrição',
+
+                  image.width > 0 &&
+                  image.height > 0 &&
+                  `${image.width} × ${image.height}px`
+                ].filter(Boolean).join(' · ')
+
+                return (
+                  <li key={image.id}>
+                    <button
+                      className="result-button"
+                      type="button"
+                      title={image.description}
+                      aria-label={`Localizar imagem: ${image.description}. ${imageDetails}`}
+                      onClick={() => handleImageClick(image.id)}
+                    >
+                      <strong>{truncateText(image.description)}</strong>
+                      <span className="result-meta">{imageDetails}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <p>Nenhuma imagem visível foi encontrada.</p>
           )}
 
         </section>

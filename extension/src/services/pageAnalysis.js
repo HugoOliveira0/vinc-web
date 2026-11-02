@@ -142,6 +142,38 @@ const collectPageData = () => {
         field.dataset.vincFieldId = `vinc-field-${index}`
     })
 
+
+    const allImages = [
+        ...document.querySelectorAll('img')
+    ]
+
+    allImages.forEach((image) => {
+        image.removeAttribute('data-vinc-image-id')
+    })
+
+    const imageElements = allImages.filter((image) => {
+        return isVisible(image)
+    })
+
+    imageElements.forEach((image, index) => {
+        image.dataset.vincImageId = `vinc-image-${index}`
+    })
+
+    const getImageDescription = (image) => {
+        const alt = image.getAttribute('alt')?.trim()
+
+        if (alt) {
+            return alt
+        }
+
+        if (image.hasAttribute('alt')) {
+            return 'Imagem decorativa'
+        }
+
+        return 'Imagem sem descrição'
+    }
+
+
     return {
         title: document.title,
 
@@ -186,7 +218,20 @@ const collectPageData = () => {
                 disabled: field.disabled
             })),
 
-        images: document.querySelectorAll('img').length
+        images: imageElements.length,
+
+        imageItems: imageElements
+            .slice(0, 20)
+            .map((image) => ({
+                id: image.dataset.vincImageId,
+                description: getImageDescription(image),
+                hasAlt: image.hasAttribute('alt'),
+                decorative:
+                    image.hasAttribute('alt') &&
+                    !image.getAttribute('alt')?.trim(),
+                width: image.naturalWidth,
+                height: image.naturalHeight
+            }))
     }
 }
 
