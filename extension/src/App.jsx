@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import { truncateText } from './utils/text'
 import { analyzePage } from './services/pageAnalysis'
@@ -9,12 +9,30 @@ import {
   locateField,
   locateImage
 } from './services/pageNavigation'
+import { speakText, stopSpeech } from './services/speech'
+
+
+const formatCount = (count, singular, plural) => {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
 
 function App() {
   const [status, setStatus] = useState('Aguardando análise...')
   const [analysis, setAnalysis] = useState(null)
 
+  const [isSpeaking, setIsSpeaking] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      stopSpeech()
+    }
+  }, [])
+
   const handleAnalyze = async () => {
+    stopSpeech()
+    setIsSpeaking(false)
+
     // Limpando resultado anterior
     setAnalysis(null)
 
@@ -40,6 +58,57 @@ function App() {
       console.error('Erro ao analisar a página:', error)
       setStatus('Não foi possível analisar a página.')
     }
+  }
+
+  const handleReadSummary = () => {
+    if (!analysis) {
+      setStatus('Analise uma página antes de iniciar a leitura.')
+      return
+    }
+
+    const pageTitle = analysis.title || 'sem título'
+
+    const summaryText = [
+      `Resumo da página ${pageTitle}.`,
+      `Foram encontrados`,
+      `${formatCount(analysis.headings, 'título', 'títulos')},`,
+      `${formatCount(analysis.links, 'link', 'links')},`,
+      `${formatCount(analysis.buttons, 'botão', 'botões')},`,
+      `${formatCount(analysis.fields, 'campo', 'campos')} e`,
+      `${formatCount(analysis.images, 'imagem', 'imagens')}.`
+    ].join(' ')
+
+    try {
+      setIsSpeaking(true)
+      setStatus('Preparando leitura...')
+
+      speakText(summaryText, {
+        onStart: () => {
+          setStatus('Lendo o resumo da página...')
+        },
+
+        onEnd: () => {
+          setIsSpeaking(false)
+          setStatus('Leitura concluída.')
+        },
+
+        onError: (event) => {
+          console.error('Erro durante a leitura:', event.error)
+          setIsSpeaking(false)
+          setStatus('Não foi possível realizar a leitura.')
+        }
+      })
+    } catch (error) {
+      console.error('Erro ao iniciar leitura:', error)
+      setIsSpeaking(false)
+      setStatus(error.message)
+    }
+  }
+
+  const handleStopReading = () => {
+    stopSpeech()
+    setIsSpeaking(false)
+    setStatus('Leitura interrompida.')
   }
 
   const handleHeadingClick = async (headingId) => {
@@ -215,6 +284,31 @@ function App() {
       </button>
 
       <p className="status-message" role="status">{status}</p>
+
+      {analysis && (
+        <div
+          className="speech-controls"
+          aria-label="Controles de leitura"
+        >
+          <button
+            className="speech-button speech-button-primary"
+            type="button"
+            onClick={handleReadSummary}
+            disabled={isSpeaking}
+          >
+            Ouvir resumo
+          </button>
+
+          <button
+            className="speech-button speech-button-stop"
+            type="button"
+            onClick={handleStopReading}
+            disabled={!isSpeaking}
+          >
+            Parar leitura
+          </button>
+        </div>
+      )}
 
       {analysis && (
         <section className="analysis" aria-labelledby="analysis-title">

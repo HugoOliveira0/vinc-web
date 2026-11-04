@@ -136,6 +136,53 @@ button {
   text-align: center;
 }
 
+.speech-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: -6px 0 20px;
+}
+
+.speech-button {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--interactive-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.speech-button-primary {
+  border-color: var(--accent);
+  color: var(--button-text);
+  background: var(--accent);
+}
+
+.speech-button-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.speech-button-stop:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--surface-hover);
+}
+
+.speech-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.speech-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .analysis {
   display: grid;
   gap: 18px;
