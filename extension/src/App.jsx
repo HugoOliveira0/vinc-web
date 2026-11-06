@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import { truncateText } from './utils/text'
 import { analyzePage } from './services/pageAnalysis'
@@ -12,6 +12,12 @@ import {
 } from './services/pageNavigation'
 import { speakText, stopSpeech } from './services/speech'
 import { parseCommand } from './services/commands'
+import {
+  createSpeechRecognition,
+  getRecognitionErrorMessage,
+  isSpeechRecognitionSupported,
+  requestMicrophonePermission
+} from './services/voiceRecognition'
 
 
 const formatCount = (count, singular, plural) => {
@@ -32,20 +38,26 @@ function App() {
   const [analysis, setAnalysis] = useState(null)
 
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [isListening, setIsListening] = useState(false)
   const [commandText, setCommandText] = useState('')
   const [navigationIndexes, setNavigationIndexes] = useState(
     createNavigationIndexes
   )
+  const recognitionRef = useRef(null)
 
   useEffect(() => {
     return () => {
       stopSpeech()
+      recognitionRef.current?.abort()
     }
   }, [])
 
   const handleAnalyze = async () => {
     stopSpeech()
     setIsSpeaking(false)
+    recognitionRef.current?.abort()
+    recognitionRef.current = null
+    setIsListening(false)
     setNavigationIndexes(createNavigationIndexes())
 
     // Limpando resultado anterior
@@ -389,10 +401,8 @@ function App() {
     }
   }
 
-  const handleCommandSubmit = async (event) => {
-    event.preventDefault()
-
-    const parsedCommand = parseCommand(commandText)
+  const executeCommand = async (text, { clearInput = true } = {}) => {
+    const parsedCommand = parseCommand(text)
 
     if (parsedCommand.type === 'empty') {
       setStatus('Digite um comando antes de executar.')
@@ -407,7 +417,9 @@ function App() {
       return
     }
 
-    setCommandText('')
+    if (clearInput) {
+      setCommandText('')
+    }
 
     switch (parsedCommand.type) {
       case 'read-summary':
@@ -435,6 +447,70 @@ function App() {
           `Comando não reconhecido: “${parsedCommand.originalText}”. ` +
           'Digite “ajuda” para ver exemplos.'
         )
+    }
+  }
+
+  const handleCommandSubmit = async (event) => {
+    event.preventDefault()
+    await executeCommand(commandText)
+  }
+
+  const handleVoiceCommand = async () => {
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setStatus('Finalizando reconhecimento...')
+      return
+    }
+
+    try {
+      stopSpeech()
+      setIsSpeaking(false)
+
+      const hasMicrophonePermission =
+        await requestMicrophonePermission()
+
+      if (!hasMicrophonePermission) {
+        setStatus(
+          'Autorize o microfone na aba aberta e tente novamente.'
+        )
+        return
+      }
+
+      const recognition = createSpeechRecognition({
+        onStart: () => {
+          setIsListening(true)
+          setStatus('Ouvindo comando...')
+        },
+
+        onResult: (transcript) => {
+          if (!transcript) {
+            setStatus('Nenhuma fala foi identificada. Tente novamente.')
+            return
+          }
+
+          setCommandText(transcript)
+          setStatus(`Comando reconhecido: “${transcript}”.`)
+          void executeCommand(transcript, { clearInput: false })
+        },
+
+        onEnd: () => {
+          setIsListening(false)
+          recognitionRef.current = null
+        },
+
+        onError: (event) => {
+          console.error('Erro no reconhecimento de voz:', event.error)
+          setIsListening(false)
+          setStatus(getRecognitionErrorMessage(event.error))
+        }
+      })
+
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch (error) {
+      console.error('Erro ao iniciar reconhecimento de voz:', error)
+      setIsListening(false)
+      setStatus(error.message)
     }
   }
 
@@ -522,6 +598,23 @@ function App() {
               <button type="submit">Executar</button>
             </div>
           </form>
+
+          {isSpeechRecognitionSupported() ? (
+            <button
+              className={`voice-command-button${
+                isListening ? ' is-listening' : ''
+              }`}
+              type="button"
+              onClick={handleVoiceCommand}
+              aria-pressed={isListening}
+            >
+              {isListening ? 'Parar escuta' : 'Falar comando'}
+            </button>
+          ) : (
+            <p className="voice-unavailable" role="note">
+              O reconhecimento de voz não está disponível neste navegador.
+            </p>
+          )}
 
           <details className="command-help">
             <summary>Ver comandos disponíveis</summary>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Permissão do microfone — V.Inc Web</title>
+    <link rel="stylesheet" href="microphone-permission.css" />
+  </head>
+  <body>
+    <main class="permission-card">
+      <p class="brand">V.INC WEB</p>
+      <h1>Permitir acesso ao microfone</h1>
+
+      <p>
+        O microfone será utilizado somente quando você iniciar um comando
+        por voz. A extensão transforma a fala em texto para executar a ação.
+      </p>
+
+      <button id="allow-microphone" type="button">
+        Permitir microfone
+      </button>
+
+      <button
+        id="open-settings"
+        class="secondary-button"
+        type="button"
+        hidden
+      >
+        Abrir configurações do microfone
+      </button>
+
+      <p id="permission-status" role="status" aria-live="polite">
+        Clique no botão acima para continuar.
+      </p>
+    </main>
+
+    <script src="microphone-permission.js"></script>
+  </body>
+</html>

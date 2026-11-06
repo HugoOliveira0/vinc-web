@@ -249,6 +249,45 @@ button {
   background: var(--accent-hover);
 }
 
+.voice-command-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 9px 14px;
+  border: 1px solid var(--interactive-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--background);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.voice-command-button:hover {
+  border-color: var(--accent-hover);
+  background: var(--surface-hover);
+}
+
+.voice-command-button:active {
+  transform: scale(0.98);
+}
+
+.voice-command-button.is-listening {
+  border-color: var(--focus);
+  color: var(--button-text);
+  background: var(--focus);
+}
+
+.voice-unavailable {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .command-row input:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
