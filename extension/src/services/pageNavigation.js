@@ -157,3 +157,24 @@ export const locateImage = (tabId, imageId) => {
         false
     )
 }
+
+const scrollPageInPage = (direction) => {
+    const distance = Math.max(window.innerHeight * 0.8, 300)
+
+    window.scrollBy({
+        top: direction === 'up' ? -distance : distance,
+        behavior: 'smooth'
+    })
+
+    return true
+}
+
+export const scrollPage = async (tabId, direction) => {
+    const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId },
+        args: [direction],
+        func: scrollPageInPage
+    })
+
+    return result
+}

@@ -7,14 +7,24 @@ import {
   locateLink,
   locateButton,
   locateField,
-  locateImage
+  locateImage,
+  scrollPage
 } from './services/pageNavigation'
 import { speakText, stopSpeech } from './services/speech'
+import { parseCommand } from './services/commands'
 
 
 const formatCount = (count, singular, plural) => {
   return `${count} ${count === 1 ? singular : plural}`
 }
+
+const createNavigationIndexes = () => ({
+  heading: -1,
+  link: -1,
+  button: -1,
+  field: -1,
+  image: -1
+})
 
 
 function App() {
@@ -22,6 +32,10 @@ function App() {
   const [analysis, setAnalysis] = useState(null)
 
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [commandText, setCommandText] = useState('')
+  const [navigationIndexes, setNavigationIndexes] = useState(
+    createNavigationIndexes
+  )
 
   useEffect(() => {
     return () => {
@@ -32,6 +46,7 @@ function App() {
   const handleAnalyze = async () => {
     stopSpeech()
     setIsSpeaking(false)
+    setNavigationIndexes(createNavigationIndexes())
 
     // Limpando resultado anterior
     setAnalysis(null)
@@ -254,6 +269,175 @@ function App() {
     }
   }
 
+  const getActiveAnalyzedTab = async () => {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+
+    if (tab.id !== analysis?.tabId) {
+      setStatus(
+        'A página analisada não é mais a aba ativa. Analise novamente.'
+      )
+      return null
+    }
+
+    return tab
+  }
+
+  const getElementConfig = () => {
+    return {
+      heading: {
+        items: analysis.headingItems,
+        name: 'título',
+        handler: handleHeadingClick
+      },
+      link: {
+        items: analysis.linkItems,
+        name: 'link',
+        handler: handleLinkClick
+      },
+      button: {
+        items: analysis.buttonItems,
+        name: 'botão',
+        handler: handleButtonClick
+      },
+      field: {
+        items: analysis.fieldItems,
+        name: 'campo',
+        handler: handleFieldClick
+      },
+      image: {
+        items: analysis.imageItems,
+        name: 'imagem',
+        handler: handleImageClick
+      }
+    }
+  }
+
+  const updateNavigationIndex = (elementType, index) => {
+    setNavigationIndexes((currentIndexes) => ({
+      ...currentIndexes,
+      [elementType]: index
+    }))
+  }
+
+  const handleLocateCommand = async ({ elementType, position }) => {
+    const elementConfig = getElementConfig()
+
+    const config = elementConfig[elementType]
+    const itemIndex = position - 1
+
+    if (!config || itemIndex < 0 || itemIndex >= config.items.length) {
+      const availableCount = config?.items.length || 0
+
+      setStatus(
+        `Não existe ${config?.name || 'elemento'} ${position} na lista. ` +
+        `${availableCount} itens estão disponíveis.`
+      )
+      return
+    }
+
+    await config.handler(config.items[itemIndex].id)
+    updateNavigationIndex(elementType, itemIndex)
+  }
+
+  const handleNavigateElementCommand = async ({
+    elementType,
+    direction
+  }) => {
+    const config = getElementConfig()[elementType]
+
+    if (!config || config.items.length === 0) {
+      setStatus(
+        `${elementType === 'image' ? 'Nenhuma' : 'Nenhum'} ` +
+        `${config?.name || 'elemento'} visível foi encontrado.`
+      )
+      return
+    }
+
+    const currentIndex = navigationIndexes[elementType] ?? -1
+    const itemCount = config.items.length
+
+    const nextIndex = direction === 'previous'
+      ? currentIndex < 0
+        ? itemCount - 1
+        : (currentIndex - 1 + itemCount) % itemCount
+      : (currentIndex + 1) % itemCount
+
+    await config.handler(config.items[nextIndex].id)
+    updateNavigationIndex(elementType, nextIndex)
+  }
+
+  const handleScrollCommand = async (direction) => {
+    const tab = await getActiveAnalyzedTab()
+
+    if (!tab) {
+      return
+    }
+
+    try {
+      await scrollPage(tab.id, direction)
+      setStatus(
+        direction === 'up'
+          ? 'Página rolada para cima.'
+          : 'Página rolada para baixo.'
+      )
+    } catch (error) {
+      console.error('Erro ao rolar página:', error)
+      setStatus('Não foi possível rolar a página.')
+    }
+  }
+
+  const handleCommandSubmit = async (event) => {
+    event.preventDefault()
+
+    const parsedCommand = parseCommand(commandText)
+
+    if (parsedCommand.type === 'empty') {
+      setStatus('Digite um comando antes de executar.')
+      return
+    }
+
+    if (parsedCommand.type === 'help') {
+      setStatus(
+        'Exemplos: próximo título, link anterior, botão 2, ' +
+        'rolar pra baixo, subir página, ler resumo.'
+      )
+      return
+    }
+
+    setCommandText('')
+
+    switch (parsedCommand.type) {
+      case 'read-summary':
+        handleReadSummary()
+        break
+
+      case 'stop-reading':
+        handleStopReading()
+        break
+
+      case 'navigate-element':
+        await handleNavigateElementCommand(parsedCommand)
+        break
+
+      case 'locate-element':
+        await handleLocateCommand(parsedCommand)
+        break
+
+      case 'scroll':
+        await handleScrollCommand(parsedCommand.direction)
+        break
+
+      default:
+        setStatus(
+          `Comando não reconhecido: “${parsedCommand.originalText}”. ` +
+          'Digite “ajuda” para ver exemplos.'
+        )
+    }
+  }
+
 
   return (
     <main className="app">
@@ -311,6 +495,51 @@ function App() {
       )}
 
       {analysis && (
+        <section
+          className="command-panel"
+          aria-labelledby="command-panel-title"
+        >
+          <h2 id="command-panel-title">Comandos de navegação</h2>
+
+          <p id="command-description">
+            Digite uma ação para localizar elementos ou controlar a página.
+          </p>
+
+          <form className="command-form" onSubmit={handleCommandSubmit}>
+            <label htmlFor="command-input">Comando</label>
+
+            <div className="command-row">
+              <input
+                id="command-input"
+                type="text"
+                value={commandText}
+                onChange={(event) => setCommandText(event.target.value)}
+                placeholder="Ex.: título 2"
+                aria-describedby="command-description"
+                autoComplete="off"
+              />
+
+              <button type="submit">Executar</button>
+            </div>
+          </form>
+
+          <details className="command-help">
+            <summary>Ver comandos disponíveis</summary>
+            <ul>
+              <li>ler resumo ou parar leitura;</li>
+              <li>
+                próximo ou anterior: título, link, botão, campo e imagem;
+              </li>
+              <li>título, link, botão, campo ou imagem seguido do número;</li>
+              <li>
+                rolar pra cima/baixo ou subir/descer página.
+              </li>
+            </ul>
+          </details>
+        </section>
+      )}
+
+      {analysis && (
         <section className="analysis" aria-labelledby="analysis-title">
           <h2 id="analysis-title">Resumo da página</h2>
 
@@ -331,12 +560,15 @@ function App() {
 
           {analysis.headingItems.length > 0 ? (
             <ol className="result-list">
-              {analysis.headingItems.map((heading) => (
+              {analysis.headingItems.map((heading, index) => (
                 <li key={heading.id}>
                   <button
                     className="result-button"
                     type="button"
-                    onClick={() => handleHeadingClick(heading.id)}
+                    onClick={() => {
+                      updateNavigationIndex('heading', index)
+                      handleHeadingClick(heading.id)
+                    }}
                   >
                     <strong>{heading.level.toUpperCase()}:</strong>{' '}
                     {heading.text}
@@ -353,14 +585,17 @@ function App() {
 
           {analysis.linkItems.length > 0 ? (
             <ol className="result-list">
-              {analysis.linkItems.map((link) => (
+              {analysis.linkItems.map((link, index) => (
                 <li key={link.id}>
                   <button
                     className="result-button"
                     type="button"
                     title={link.text}
                     aria-label={`Localizar link: ${link.text}`}
-                    onClick={() => handleLinkClick(link.id)}
+                    onClick={() => {
+                      updateNavigationIndex('link', index)
+                      handleLinkClick(link.id)
+                    }}
                   >
                     {truncateText(link.text)}
                   </button>
@@ -376,14 +611,17 @@ function App() {
 
           {analysis.buttonItems.length > 0 ? (
             <ol className="result-list">
-              {analysis.buttonItems.map((button) => (
+              {analysis.buttonItems.map((button, index) => (
                 <li key={button.id}>
                   <button
                     className="result-button"
                     type="button"
                     title={button.text}
                     aria-label={`Localizar botão: ${button.text}`}
-                    onClick={() => handleButtonClick(button.id)}
+                    onClick={() => {
+                      updateNavigationIndex('button', index)
+                      handleButtonClick(button.id)
+                    }}
                   >
                     {truncateText(button.text)}
                   </button>
@@ -398,7 +636,7 @@ function App() {
 
           {analysis.fieldItems.length > 0 ? (
             <ol className="result-list">
-              {analysis.fieldItems.map((field) => {
+              {analysis.fieldItems.map((field, index) => {
                 const fieldDetails = [
                   field.type,
                   field.required && 'obrigatório',
@@ -412,7 +650,10 @@ function App() {
                       type="button"
                       title={field.label}
                       aria-label={`Localizar campo: ${field.label}. ${fieldDetails}`}
-                      onClick={() => handleFieldClick(field.id)}
+                      onClick={() => {
+                        updateNavigationIndex('field', index)
+                        handleFieldClick(field.id)
+                      }}
                     >
                       <strong>{truncateText(field.label)}</strong>
                       <span className="result-meta">{fieldDetails}</span>
@@ -430,7 +671,7 @@ function App() {
 
           {analysis.imageItems.length > 0 ? (
             <ol className="result-list">
-              {analysis.imageItems.map((image) => {
+              {analysis.imageItems.map((image, index) => {
                 const imageDetails = [
                   image.decorative
                     ? 'decorativa'
@@ -450,7 +691,10 @@ function App() {
                       type="button"
                       title={image.description}
                       aria-label={`Localizar imagem: ${image.description}. ${imageDetails}`}
-                      onClick={() => handleImageClick(image.id)}
+                      onClick={() => {
+                        updateNavigationIndex('image', index)
+                        handleImageClick(image.id)
+                      }}
                     >
                       <strong>{truncateText(image.description)}</strong>
                       <span className="result-meta">{imageDetails}</span>
