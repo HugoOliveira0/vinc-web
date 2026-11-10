@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import { truncateText } from './utils/text'
 import { analyzePage } from './services/pageAnalysis'
@@ -44,6 +44,7 @@ function App() {
     createNavigationIndexes
   )
   const recognitionRef = useRef(null)
+  const autoAnalyzeTimerRef = useRef(null)
 
   useEffect(() => {
     return () => {
@@ -52,7 +53,7 @@ function App() {
     }
   }, [])
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     stopSpeech()
     setIsSpeaking(false)
     recognitionRef.current?.abort()
@@ -85,7 +86,77 @@ function App() {
       console.error('Erro ao analisar a página:', error)
       setStatus('Não foi possível analisar a página.')
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const canAnalyzeTab = (tab) => {
+      if (!tab?.id || !tab.active || !tab.url) {
+        return false
+      }
+
+      try {
+        const protocol = new URL(tab.url).protocol
+        return protocol === 'http:' || protocol === 'https:'
+      } catch {
+        return false
+      }
+    }
+
+    const scheduleAnalysis = (tab) => {
+      window.clearTimeout(autoAnalyzeTimerRef.current)
+
+      if (!canAnalyzeTab(tab)) {
+        if (tab?.active) {
+          setAnalysis(null)
+          setStatus('Esta página não permite análise pela extensão.')
+        }
+
+        return
+      }
+
+      autoAnalyzeTimerRef.current = window.setTimeout(() => {
+        void handleAnalyze()
+      }, 350)
+    }
+
+    const analyzeInitialTab = async () => {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      scheduleAnalysis(tab)
+    }
+
+    const handleTabActivated = async ({ tabId }) => {
+      try {
+        const tab = await chrome.tabs.get(tabId)
+        scheduleAnalysis(tab)
+      } catch (error) {
+        console.error('Erro ao acompanhar a aba ativa:', error)
+      }
+    }
+
+    const handleTabUpdated = (tabId, changeInfo, tab) => {
+      if (
+        tab.active &&
+        (changeInfo.status === 'complete' || changeInfo.url)
+      ) {
+        scheduleAnalysis({ ...tab, id: tabId })
+      }
+    }
+
+    void analyzeInitialTab()
+
+    chrome.tabs.onActivated.addListener(handleTabActivated)
+    chrome.tabs.onUpdated.addListener(handleTabUpdated)
+
+    return () => {
+      window.clearTimeout(autoAnalyzeTimerRef.current)
+      chrome.tabs.onActivated.removeListener(handleTabActivated)
+      chrome.tabs.onUpdated.removeListener(handleTabUpdated)
+    }
+  }, [handleAnalyze])
 
   const handleReadSummary = () => {
     if (!analysis) {
@@ -540,7 +611,7 @@ function App() {
         type="button"
         onClick={handleAnalyze}
       >
-        Analisar página
+        {analysis ? 'Analisar novamente' : 'Analisar página'}
       </button>
 
       <p className="status-message" role="status">{status}</p>
