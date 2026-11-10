@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
+import AccessibilitySettings from './components/AccessibilitySettings'
 import ResultSection from './components/ResultSection'
 import { truncateText } from './utils/text'
 import { filterAnalysisResults } from './utils/filterResults'
@@ -14,6 +15,12 @@ import {
 } from './services/pageNavigation'
 import { speakText, stopSpeech } from './services/speech'
 import { parseCommand } from './services/commands'
+import {
+  applyPreferences,
+  defaultPreferences,
+  loadPreferences,
+  savePreferences
+} from './services/preferences'
 import {
   createSpeechRecognition,
   getRecognitionErrorMessage,
@@ -48,6 +55,7 @@ const createVisibleResultCounts = () => ({
 function App() {
   const [status, setStatus] = useState('Aguardando análise...')
   const [analysis, setAnalysis] = useState(null)
+  const [preferences, setPreferences] = useState(defaultPreferences)
 
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isListening, setIsListening] = useState(false)
@@ -68,6 +76,61 @@ function App() {
       recognitionRef.current?.abort()
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    loadPreferences()
+      .then((storedPreferences) => {
+        if (isMounted) {
+          setPreferences(storedPreferences)
+        }
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar preferências:', error)
+
+        if (isMounted) {
+          setStatus('Não foi possível carregar as preferências salvas.')
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    applyPreferences(preferences)
+  }, [preferences])
+
+  const handlePreferenceChange = async (name, value) => {
+    const updatedPreferences = {
+      ...preferences,
+      [name]: value
+    }
+
+    setPreferences(updatedPreferences)
+
+    try {
+      await savePreferences(updatedPreferences)
+      setStatus('Preferências salvas.')
+    } catch (error) {
+      console.error('Erro ao salvar preferências:', error)
+      setStatus('Não foi possível salvar as preferências.')
+    }
+  }
+
+  const handleResetPreferences = async () => {
+    setPreferences(defaultPreferences)
+
+    try {
+      await savePreferences(defaultPreferences)
+      setStatus('Preferências restauradas.')
+    } catch (error) {
+      console.error('Erro ao restaurar preferências:', error)
+      setStatus('Não foi possível restaurar as preferências.')
+    }
+  }
 
   const handleAnalyze = useCallback(async () => {
     stopSpeech()
@@ -647,6 +710,12 @@ function App() {
       <p className="app-description">
         Extensão de acessibilidade para análise e navegação em páginas web.
       </p>
+
+      <AccessibilitySettings
+        preferences={preferences}
+        onChange={handlePreferenceChange}
+        onReset={handleResetPreferences}
+      />
 
       <button
         className="analyze-button"

@@ -44,7 +44,118 @@ const locateElementInPage = (
         return element
     }
 
+    const parseRgbColor = (color) => {
+        const match = color.match(/^rgba?\(([^)]+)\)$/i)
+
+        if (!match) {
+            return null
+        }
+
+        const values = match[1]
+            .split(',')
+            .map((value) => Number.parseFloat(value.trim()))
+
+        if (values.length < 3 || values.some(Number.isNaN)) {
+            return null
+        }
+
+        return {
+            red: values[0],
+            green: values[1],
+            blue: values[2],
+            alpha: values[3] ?? 1
+        }
+    }
+
+    const getRelativeLuminance = ({ red, green, blue }) => {
+        const convertChannel = (channel) => {
+            const value = channel / 255
+
+            return value <= 0.04045
+                ? value / 12.92
+                : ((value + 0.055) / 1.055) ** 2.4
+        }
+
+        const convertedRed = convertChannel(red)
+        const convertedGreen = convertChannel(green)
+        const convertedBlue = convertChannel(blue)
+
+        return (
+            0.2126 * convertedRed +
+            0.7152 * convertedGreen +
+            0.0722 * convertedBlue
+        )
+    }
+
+    const getContrastRatio = (firstColor, secondColor) => {
+        const firstLuminance = getRelativeLuminance(firstColor)
+        const secondLuminance = getRelativeLuminance(secondColor)
+        const lighter = Math.max(firstLuminance, secondLuminance)
+        const darker = Math.min(firstLuminance, secondLuminance)
+
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    const getAdjacentBackground = (element, useInnerArea) => {
+        if (selectedElement.tagName === 'IMG') {
+            return { color: null, complex: true }
+        }
+
+        let currentElement = useInnerArea
+            ? element
+            : element.parentElement
+
+        while (currentElement) {
+            const style = window.getComputedStyle(currentElement)
+
+            if (style.backgroundImage !== 'none') {
+                return { color: null, complex: true }
+            }
+
+            const color = parseRgbColor(style.backgroundColor)
+
+            if (color?.alpha > 0 && color.alpha < 1) {
+                return { color: null, complex: true }
+            }
+
+            if (color?.alpha === 1) {
+                return { color, complex: false }
+            }
+
+            currentElement = currentElement.parentElement
+        }
+
+        return {
+            color: { red: 255, green: 255, blue: 255, alpha: 1 },
+            complex: false
+        }
+    }
+
+    const getHighlightColors = (element, useInnerArea) => {
+        const black = { red: 0, green: 0, blue: 0 }
+        const yellow = { red: 255, green: 234, blue: 0 }
+        const background = getAdjacentBackground(element, useInnerArea)
+
+        if (background.complex || !background.color) {
+            return {
+                outline: '#ffea00',
+                secondaryRing: '0 0 0 7px #000000'
+            }
+        }
+
+        const blackContrast = getContrastRatio(black, background.color)
+        const yellowContrast = getContrastRatio(yellow, background.color)
+
+        return {
+            outline: blackContrast >= yellowContrast
+                ? '#000000'
+                : '#ffea00',
+            secondaryRing: ''
+        }
+    }
+
     const highlightTarget = getHighlightTarget(selectedElement)
+    const useInnerArea = selectedElement.tagName === 'IMG'
 
     selectedElement.scrollIntoView({
         behavior: 'smooth',
@@ -67,15 +178,27 @@ const locateElementInPage = (
 
             highlightTarget.dataset.vincPreviousOutlineOffset =
                 highlightTarget.style.outlineOffset
+
+            highlightTarget.dataset.vincPreviousBoxShadow =
+                highlightTarget.style.boxShadow
         }
 
         // O clique mais recente passa a controlar a restauração.
         highlightTarget.dataset.vincHighlightToken = highlightToken
 
-        highlightTarget.style.outline = '4px solid #00d4ff'
+        const highlightColors = getHighlightColors(
+            highlightTarget,
+            useInnerArea
+        )
+
+        highlightTarget.style.outline =
+            `4px solid ${highlightColors.outline}`
 
         highlightTarget.style.outlineOffset =
-            selectedElement.tagName === 'IMG' ? '-4px' : '4px'
+            useInnerArea ? '-4px' : '4px'
+
+        highlightTarget.style.boxShadow =
+            highlightColors.secondaryRing
 
         window.setTimeout(() => {
             // Um clique mais recente aconteceu: este timer antigo não faz nada.
@@ -92,9 +215,13 @@ const locateElementInPage = (
             highlightTarget.style.outlineOffset =
                 highlightTarget.dataset.vincPreviousOutlineOffset || ''
 
+            highlightTarget.style.boxShadow =
+                highlightTarget.dataset.vincPreviousBoxShadow || ''
+
             delete highlightTarget.dataset.vincHighlightToken
             delete highlightTarget.dataset.vincPreviousOutline
             delete highlightTarget.dataset.vincPreviousOutlineOffset
+            delete highlightTarget.dataset.vincPreviousBoxShadow
         }, 1800)
     }, 500)
 
