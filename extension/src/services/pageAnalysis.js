@@ -1,4 +1,6 @@
 const collectPageData = () => {
+    const maxItemsPerCategory = 100
+
     const allHeadings = [
         ...document.querySelectorAll('h1, h2, h3, h4, h5, h6')
     ]
@@ -180,7 +182,7 @@ const collectPageData = () => {
         headings: headingElements.length,
 
         headingItems: headingElements
-            .slice(0, 20)
+            .slice(0, maxItemsPerCategory)
             .map((heading) => ({
                 id: heading.dataset.vincHeadingId,
                 level: heading.tagName.toLowerCase(),
@@ -190,7 +192,7 @@ const collectPageData = () => {
         links: linkElements.length,
 
         linkItems: linkElements
-            .slice(0, 20)
+            .slice(0, maxItemsPerCategory)
             .map((link) => ({
                 id: link.dataset.vincLinkId,
                 text: getLinkText(link),
@@ -200,7 +202,7 @@ const collectPageData = () => {
         buttons: buttonElements.length,
 
         buttonItems: buttonElements
-            .slice(0, 20)
+            .slice(0, maxItemsPerCategory)
             .map((button) => ({
                 id: button.dataset.vincButtonId,
                 text: getButtonText(button)
@@ -209,7 +211,7 @@ const collectPageData = () => {
         fields: fieldElements.length,
 
         fieldItems: fieldElements
-            .slice(0, 20)
+            .slice(0, maxItemsPerCategory)
             .map((field) => ({
                 id: field.dataset.vincFieldId,
                 label: getFieldLabel(field),
@@ -221,7 +223,7 @@ const collectPageData = () => {
         images: imageElements.length,
 
         imageItems: imageElements
-            .slice(0, 20)
+            .slice(0, maxItemsPerCategory)
             .map((image) => ({
                 id: image.dataset.vincImageId,
                 description: getImageDescription(image),

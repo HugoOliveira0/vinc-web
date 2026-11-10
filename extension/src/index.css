@@ -363,11 +363,107 @@ button {
   text-align: center;
 }
 
+.result-search {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.result-search label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.result-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.result-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid var(--interactive-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--background);
+  font: inherit;
+}
+
+.result-search input::placeholder {
+  color: var(--text-muted);
+}
+
+.result-search button,
+.show-more-button {
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid var(--interactive-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.result-search button:hover,
+.show-more-button:hover {
+  border-color: var(--accent-hover);
+  background: var(--surface-hover);
+}
+
+.result-search p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.result-section {
+  display: grid;
+  gap: 16px;
+}
+
+.result-section h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.result-count {
+  min-width: 28px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--button-text);
+  background: var(--accent);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .result-list {
   display: grid;
   gap: 8px;
   margin: -8px 0 0;
   padding-left: 28px;
+}
+
+.show-more-button {
+  width: 100%;
+  margin-top: -8px;
+}
+
+.empty-result {
+  margin: -8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
 }
 
 .result-list li {
@@ -430,6 +526,10 @@ button:focus-visible {
   }
 
   .command-row {
+    grid-template-columns: 1fr;
+  }
+
+  .result-search-row {
     grid-template-columns: 1fr;
   }
 }

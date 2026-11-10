@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
+import ResultSection from './components/ResultSection'
 import { truncateText } from './utils/text'
+import { filterAnalysisResults } from './utils/filterResults'
 import { analyzePage } from './services/pageAnalysis'
 import {
   locateHeading,
@@ -32,6 +34,16 @@ const createNavigationIndexes = () => ({
   image: -1
 })
 
+const resultPageSize = 5
+
+const createVisibleResultCounts = () => ({
+  heading: resultPageSize,
+  link: resultPageSize,
+  button: resultPageSize,
+  field: resultPageSize,
+  image: resultPageSize
+})
+
 
 function App() {
   const [status, setStatus] = useState('Aguardando análise...')
@@ -40,6 +52,10 @@ function App() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [commandText, setCommandText] = useState('')
+  const [resultSearch, setResultSearch] = useState('')
+  const [visibleResultCounts, setVisibleResultCounts] = useState(
+    createVisibleResultCounts
+  )
   const [navigationIndexes, setNavigationIndexes] = useState(
     createNavigationIndexes
   )
@@ -60,6 +76,8 @@ function App() {
     recognitionRef.current = null
     setIsListening(false)
     setNavigationIndexes(createNavigationIndexes())
+    setResultSearch('')
+    setVisibleResultCounts(createVisibleResultCounts())
 
     // Limpando resultado anterior
     setAnalysis(null)
@@ -87,6 +105,13 @@ function App() {
       setStatus('Não foi possível analisar a página.')
     }
   }, [])
+
+  const filteredResults = useMemo(() => {
+    return filterAnalysisResults(analysis, resultSearch)
+  }, [analysis, resultSearch])
+
+  const filteredResultCount = Object.values(filteredResults)
+    .reduce((total, items) => total + items.length, 0)
 
   useEffect(() => {
     const canAnalyzeTab = (tab) => {
@@ -405,6 +430,23 @@ function App() {
     }))
   }
 
+  const getOriginalItemIndex = (elementType, itemId) => {
+    const items = getElementConfig()[elementType]?.items || []
+    return items.findIndex((item) => item.id === itemId)
+  }
+
+  const showMoreResults = (elementType) => {
+    setVisibleResultCounts((currentCounts) => ({
+      ...currentCounts,
+      [elementType]: currentCounts[elementType] + resultPageSize
+    }))
+  }
+
+  const updateResultSearch = (value) => {
+    setResultSearch(value)
+    setVisibleResultCounts(createVisibleResultCounts())
+  }
+
   const handleLocateCommand = async ({ elementType, position }) => {
     const elementConfig = getElementConfig()
 
@@ -720,156 +762,195 @@ function App() {
           </ul>
 
 
-          <h3>Títulos encontrados</h3>
+          <div className="result-search">
+            <label htmlFor="result-search-input">
+              Pesquisar nos elementos encontrados
+            </label>
 
-          {analysis.headingItems.length > 0 ? (
-            <ol className="result-list">
-              {analysis.headingItems.map((heading, index) => (
-                <li key={heading.id}>
-                  <button
-                    className="result-button"
-                    type="button"
-                    onClick={() => {
-                      updateNavigationIndex('heading', index)
-                      handleHeadingClick(heading.id)
-                    }}
-                  >
-                    <strong>{heading.level.toUpperCase()}:</strong>{' '}
-                    {heading.text}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p>Nenhum título com texto foi encontrado.</p>
-          )}
+            <div className="result-search-row">
+              <input
+                id="result-search-input"
+                type="search"
+                value={resultSearch}
+                onChange={(event) => updateResultSearch(event.target.value)}
+                placeholder="Ex.: pesquisar, enviar ou imagem"
+                aria-describedby="result-search-status"
+                autoComplete="off"
+              />
 
+              {resultSearch && (
+                <button
+                  type="button"
+                  onClick={() => updateResultSearch('')}
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
 
-          <h3>Links encontrados</h3>
+            <p id="result-search-status" role="status">
+              {resultSearch.trim()
+                ? `${filteredResultCount} resultados correspondentes.`
+                : 'Exibindo até 100 itens de cada categoria.'}
+            </p>
+          </div>
 
-          {analysis.linkItems.length > 0 ? (
-            <ol className="result-list">
-              {analysis.linkItems.map((link, index) => (
-                <li key={link.id}>
-                  <button
-                    className="result-button"
-                    type="button"
-                    title={link.text}
-                    aria-label={`Localizar link: ${link.text}`}
-                    onClick={() => {
-                      updateNavigationIndex('link', index)
-                      handleLinkClick(link.id)
-                    }}
-                  >
-                    {truncateText(link.text)}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p>Nenhum link visível foi encontrado.</p>
-          )}
+          <ResultSection
+            id="heading-results"
+            title="Títulos encontrados"
+            items={filteredResults.heading}
+            emptyMessage="Nenhum título corresponde à pesquisa."
+            visibleCount={visibleResultCounts.heading}
+            onShowMore={() => showMoreResults('heading')}
+            renderItem={(heading) => (
+              <button
+                className="result-button"
+                type="button"
+                onClick={() => {
+                  updateNavigationIndex(
+                    'heading',
+                    getOriginalItemIndex('heading', heading.id)
+                  )
+                  void handleHeadingClick(heading.id)
+                }}
+              >
+                <strong>{heading.level.toUpperCase()}:</strong>{' '}
+                {heading.text}
+              </button>
+            )}
+          />
 
+          <ResultSection
+            id="link-results"
+            title="Links encontrados"
+            items={filteredResults.link}
+            emptyMessage="Nenhum link corresponde à pesquisa."
+            visibleCount={visibleResultCounts.link}
+            onShowMore={() => showMoreResults('link')}
+            renderItem={(link) => (
+              <button
+                className="result-button"
+                type="button"
+                title={link.text}
+                aria-label={`Localizar link: ${link.text}`}
+                onClick={() => {
+                  updateNavigationIndex(
+                    'link',
+                    getOriginalItemIndex('link', link.id)
+                  )
+                  void handleLinkClick(link.id)
+                }}
+              >
+                {truncateText(link.text)}
+              </button>
+            )}
+          />
 
-          <h3>Botões encontrados</h3>
+          <ResultSection
+            id="button-results"
+            title="Botões encontrados"
+            items={filteredResults.button}
+            emptyMessage="Nenhum botão corresponde à pesquisa."
+            visibleCount={visibleResultCounts.button}
+            onShowMore={() => showMoreResults('button')}
+            renderItem={(button) => (
+              <button
+                className="result-button"
+                type="button"
+                title={button.text}
+                aria-label={`Localizar botão: ${button.text}`}
+                onClick={() => {
+                  updateNavigationIndex(
+                    'button',
+                    getOriginalItemIndex('button', button.id)
+                  )
+                  void handleButtonClick(button.id)
+                }}
+              >
+                {truncateText(button.text)}
+              </button>
+            )}
+          />
 
-          {analysis.buttonItems.length > 0 ? (
-            <ol className="result-list">
-              {analysis.buttonItems.map((button, index) => (
-                <li key={button.id}>
-                  <button
-                    className="result-button"
-                    type="button"
-                    title={button.text}
-                    aria-label={`Localizar botão: ${button.text}`}
-                    onClick={() => {
-                      updateNavigationIndex('button', index)
-                      handleButtonClick(button.id)
-                    }}
-                  >
-                    {truncateText(button.text)}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p>Nenhum botão visível foi encontrado.</p>
-          )}
+          <ResultSection
+            id="field-results"
+            title="Campos encontrados"
+            items={filteredResults.field}
+            emptyMessage="Nenhum campo corresponde à pesquisa."
+            visibleCount={visibleResultCounts.field}
+            onShowMore={() => showMoreResults('field')}
+            renderItem={(field) => {
+              const fieldDetails = [
+                field.type,
+                field.required && 'obrigatório',
+                field.disabled && 'desabilitado'
+              ].filter(Boolean).join(' · ')
 
-          <h3>Campos encontrados</h3>
+              return (
+                <button
+                  className="result-button"
+                  type="button"
+                  title={field.label}
+                  aria-label={
+                    `Localizar campo: ${field.label}. ${fieldDetails}`
+                  }
+                  onClick={() => {
+                    updateNavigationIndex(
+                      'field',
+                      getOriginalItemIndex('field', field.id)
+                    )
+                    void handleFieldClick(field.id)
+                  }}
+                >
+                  <strong>{truncateText(field.label)}</strong>
+                  <span className="result-meta">{fieldDetails}</span>
+                </button>
+              )
+            }}
+          />
 
-          {analysis.fieldItems.length > 0 ? (
-            <ol className="result-list">
-              {analysis.fieldItems.map((field, index) => {
-                const fieldDetails = [
-                  field.type,
-                  field.required && 'obrigatório',
-                  field.disabled && 'desabilitado'
-                ].filter(Boolean).join(' · ')
+          <ResultSection
+            id="image-results"
+            title="Imagens encontradas"
+            items={filteredResults.image}
+            emptyMessage="Nenhuma imagem corresponde à pesquisa."
+            visibleCount={visibleResultCounts.image}
+            onShowMore={() => showMoreResults('image')}
+            renderItem={(image) => {
+              const imageDetails = [
+                image.decorative
+                  ? 'decorativa'
+                  : image.hasAlt
+                    ? 'com descrição'
+                    : 'sem descrição',
 
-                return (
-                  <li key={field.id}>
-                    <button
-                      className="result-button"
-                      type="button"
-                      title={field.label}
-                      aria-label={`Localizar campo: ${field.label}. ${fieldDetails}`}
-                      onClick={() => {
-                        updateNavigationIndex('field', index)
-                        handleFieldClick(field.id)
-                      }}
-                    >
-                      <strong>{truncateText(field.label)}</strong>
-                      <span className="result-meta">{fieldDetails}</span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ol>
-          ) : (
-            <p>Nenhum campo visível foi encontrado.</p>
-          )}
+                image.width > 0 &&
+                image.height > 0 &&
+                `${image.width} × ${image.height}px`
+              ].filter(Boolean).join(' · ')
 
-
-          <h3>Imagens encontradas</h3>
-
-          {analysis.imageItems.length > 0 ? (
-            <ol className="result-list">
-              {analysis.imageItems.map((image, index) => {
-                const imageDetails = [
-                  image.decorative
-                    ? 'decorativa'
-                    : image.hasAlt
-                      ? 'com descrição'
-                      : 'sem descrição',
-
-                  image.width > 0 &&
-                  image.height > 0 &&
-                  `${image.width} × ${image.height}px`
-                ].filter(Boolean).join(' · ')
-
-                return (
-                  <li key={image.id}>
-                    <button
-                      className="result-button"
-                      type="button"
-                      title={image.description}
-                      aria-label={`Localizar imagem: ${image.description}. ${imageDetails}`}
-                      onClick={() => {
-                        updateNavigationIndex('image', index)
-                        handleImageClick(image.id)
-                      }}
-                    >
-                      <strong>{truncateText(image.description)}</strong>
-                      <span className="result-meta">{imageDetails}</span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ol>
-          ) : (
-            <p>Nenhuma imagem visível foi encontrada.</p>
-          )}
+              return (
+                <button
+                  className="result-button"
+                  type="button"
+                  title={image.description}
+                  aria-label={
+                    `Localizar imagem: ${image.description}. ${imageDetails}`
+                  }
+                  onClick={() => {
+                    updateNavigationIndex(
+                      'image',
+                      getOriginalItemIndex('image', image.id)
+                    )
+                    void handleImageClick(image.id)
+                  }}
+                >
+                  <strong>{truncateText(image.description)}</strong>
+                  <span className="result-meta">{imageDetails}</span>
+                </button>
+              )
+            }}
+          />
 
         </section>
       )}
