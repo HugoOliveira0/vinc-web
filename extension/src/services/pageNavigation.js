@@ -285,6 +285,61 @@ export const locateImage = (tabId, imageId) => {
     )
 }
 
+const activateElementInPage = (attribute, id) => {
+    const selectedElement = document.querySelector(
+        `[${attribute}="${id}"]`
+    )
+
+    if (!selectedElement) {
+        return { activated: false, reason: 'not-found' }
+    }
+
+    const isDisabled =
+        selectedElement.disabled ||
+        selectedElement.getAttribute('aria-disabled') === 'true'
+
+    if (isDisabled) {
+        return { activated: false, reason: 'disabled' }
+    }
+
+    if (typeof selectedElement.click !== 'function') {
+        return { activated: false, reason: 'unsupported' }
+    }
+
+    selectedElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    })
+
+    selectedElement.focus({
+        preventScroll: true
+    })
+
+    window.setTimeout(() => {
+        selectedElement.click()
+    }, 250)
+
+    return { activated: true }
+}
+
+const activateElement = async (tabId, attribute, id) => {
+    const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId },
+        args: [attribute, id],
+        func: activateElementInPage
+    })
+
+    return result
+}
+
+export const activateLink = (tabId, linkId) => {
+    return activateElement(tabId, 'data-vinc-link-id', linkId)
+}
+
+export const activateButton = (tabId, buttonId) => {
+    return activateElement(tabId, 'data-vinc-button-id', buttonId)
+}
+
 const scrollPageInPage = (direction) => {
     const distance = Math.max(window.innerHeight * 0.8, 300)
 

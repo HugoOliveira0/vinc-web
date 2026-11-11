@@ -11,6 +11,8 @@ import {
   locateButton,
   locateField,
   locateImage,
+  activateLink,
+  activateButton,
   scrollPage
 } from './services/pageNavigation'
 import { speakText, stopSpeech } from './services/speech'
@@ -466,12 +468,14 @@ function App() {
       link: {
         items: analysis.linkItems,
         name: 'link',
-        handler: handleLinkClick
+        handler: handleLinkClick,
+        activator: activateLink
       },
       button: {
         items: analysis.buttonItems,
         name: 'botão',
-        handler: handleButtonClick
+        handler: handleButtonClick,
+        activator: activateButton
       },
       field: {
         items: analysis.fieldItems,
@@ -557,6 +561,56 @@ function App() {
     updateNavigationIndex(elementType, nextIndex)
   }
 
+  const handleActivateCommand = async ({ elementType, position }) => {
+    const config = getElementConfig()[elementType]
+    const itemIndex = position - 1
+
+    if (
+      !config?.activator ||
+      itemIndex < 0 ||
+      itemIndex >= config.items.length
+    ) {
+      const availableCount = config?.items.length || 0
+
+      setStatus(
+        `Não existe ${config?.name || 'elemento'} ${position} na lista. ` +
+        `${availableCount} itens estão disponíveis.`
+      )
+      return
+    }
+
+    const tab = await getActiveAnalyzedTab()
+
+    if (!tab) {
+      return
+    }
+
+    setStatus(`Ativando ${config.name} ${position}...`)
+
+    try {
+      const result = await config.activator(
+        tab.id,
+        config.items[itemIndex].id
+      )
+
+      if (result?.activated) {
+        updateNavigationIndex(elementType, itemIndex)
+        setStatus(`${config.name} ${position} ativado.`)
+        return
+      }
+
+      if (result?.reason === 'disabled') {
+        setStatus(`${config.name} ${position} está desabilitado.`)
+        return
+      }
+
+      setStatus(`${config.name} ${position} não pôde ser ativado.`)
+    } catch (error) {
+      console.error('Erro ao ativar elemento:', error)
+      setStatus(`Não foi possível ativar ${config.name} ${position}.`)
+    }
+  }
+
   const handleScrollCommand = async (direction) => {
     const tab = await getActiveAnalyzedTab()
 
@@ -588,7 +642,7 @@ function App() {
     if (parsedCommand.type === 'help') {
       setStatus(
         'Exemplos: próximo título, link anterior, botão 2, ' +
-        'rolar pra baixo, subir página, ler resumo.'
+        'clicar botão 2, abrir link 3, rolar pra baixo e ler resumo.'
       )
       return
     }
@@ -612,6 +666,10 @@ function App() {
 
       case 'locate-element':
         await handleLocateCommand(parsedCommand)
+        break
+
+      case 'activate-element':
+        await handleActivateCommand(parsedCommand)
         break
 
       case 'scroll':
@@ -806,6 +864,7 @@ function App() {
                 próximo ou anterior: título, link, botão, campo e imagem;
               </li>
               <li>título, link, botão, campo ou imagem seguido do número;</li>
+              <li>clicar botão 2 ou abrir link 3;</li>
               <li>
                 rolar pra cima/baixo ou subir/descer página.
               </li>
