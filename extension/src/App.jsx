@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import AccessibilitySettings from './components/AccessibilitySettings'
+import AISummaryPanel from './components/AISummaryPanel'
 import ResultSection from './components/ResultSection'
 import { truncateText } from './utils/text'
 import { filterAnalysisResults } from './utils/filterResults'
 import { analyzePage } from './services/pageAnalysis'
+import { collectPageContent } from './services/pageContent'
+import {
+  createElementCatalog,
+  generateAISummary,
+  isAISummaryConfigured
+} from './services/aiSummary'
 import {
   locateHeading,
   locateLink,
@@ -37,6 +44,14 @@ const formatCount = (count, singular, plural) => {
   return `${count} ${count === 1 ? singular : plural}`
 }
 
+const aiElementTypeNames = {
+  heading: 'Título',
+  link: 'Link',
+  button: 'Botão',
+  field: 'Campo',
+  image: 'Imagem'
+}
+
 const createNavigationIndexes = () => ({
   heading: -1,
   link: -1,
@@ -60,6 +75,8 @@ function App() {
   const [status, setStatus] = useState('Aguardando análise...')
   const [analysis, setAnalysis] = useState(null)
   const [preferences, setPreferences] = useState(defaultPreferences)
+  const [aiSummaryResult, setAISummaryResult] = useState(null)
+  const [isGeneratingAISummary, setIsGeneratingAISummary] = useState(false)
 
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isListening, setIsListening] = useState(false)
@@ -73,11 +90,13 @@ function App() {
   )
   const recognitionRef = useRef(null)
   const autoAnalyzeTimerRef = useRef(null)
+  const aiRequestControllerRef = useRef(null)
 
   useEffect(() => {
     return () => {
       stopSpeech()
       recognitionRef.current?.abort()
+      aiRequestControllerRef.current?.abort()
     }
   }, [])
 
@@ -145,6 +164,10 @@ function App() {
     setNavigationIndexes(createNavigationIndexes())
     setResultSearch('')
     setVisibleResultCounts(createVisibleResultCounts())
+    aiRequestControllerRef.current?.abort()
+    aiRequestControllerRef.current = null
+    setAISummaryResult(null)
+    setIsGeneratingAISummary(false)
 
     // Limpando resultado anterior
     setAnalysis(null)
@@ -489,6 +512,116 @@ function App() {
         name: 'imagem',
         handler: handleImageClick
       }
+    }
+  }
+
+  const handleGenerateAISummary = async () => {
+    if (!isAISummaryConfigured()) {
+      setStatus('O serviço de IA ainda não foi configurado.')
+      return
+    }
+
+    const tab = await getActiveAnalyzedTab()
+
+    if (!tab) {
+      return
+    }
+
+    aiRequestControllerRef.current?.abort()
+
+    const requestController = new AbortController()
+    aiRequestControllerRef.current = requestController
+
+    setAISummaryResult(null)
+    setIsGeneratingAISummary(true)
+    setStatus('Preparando conteúdo para o resumo com IA...')
+
+    try {
+      const pageContent = await collectPageContent(tab.id)
+
+      if (!pageContent?.text || pageContent.text.length < 80) {
+        throw new Error(
+          'A página não possui texto visível suficiente para gerar um resumo.'
+        )
+      }
+
+      setStatus('Gerando resumo com IA...')
+
+      const result = await generateAISummary({
+        page: pageContent,
+        elements: createElementCatalog(analysis),
+        signal: requestController.signal
+      })
+
+      setAISummaryResult(result)
+      setStatus('Resumo com IA concluído.')
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        return
+      }
+
+      console.error('Erro ao gerar resumo com IA:', error)
+      setStatus(error.message || 'Não foi possível gerar o resumo com IA.')
+    } finally {
+      if (aiRequestControllerRef.current === requestController) {
+        aiRequestControllerRef.current = null
+        setIsGeneratingAISummary(false)
+      }
+    }
+  }
+
+  const handleLocateAIElement = async ({ type, index }) => {
+    const config = getElementConfig()[type]
+    const itemIndex = index - 1
+    const item = config?.items[itemIndex]
+
+    if (!config || !item) {
+      setStatus('O elemento indicado pela IA não está mais disponível.')
+      return
+    }
+
+    await config.handler(item.id)
+    updateNavigationIndex(type, itemIndex)
+  }
+
+  const handleReadAISummary = () => {
+    if (!aiSummaryResult) {
+      setStatus('Gere um resumo com IA antes de iniciar a leitura.')
+      return
+    }
+
+    const keyElementsText = aiSummaryResult.keyElements
+      .map((element) => {
+        return (
+          `${aiElementTypeNames[element.type]} ${element.index}: ` +
+          `${element.label}. ${element.reason}`
+        )
+      })
+      .join(' ')
+
+    try {
+      setIsSpeaking(true)
+      setStatus('Preparando leitura do resumo com IA...')
+
+      speakText(
+        `${aiSummaryResult.summary} ${keyElementsText}`.trim(),
+        {
+          onStart: () => setStatus('Lendo o resumo com IA...'),
+          onEnd: () => {
+            setIsSpeaking(false)
+            setStatus('Leitura concluída.')
+          },
+          onError: (event) => {
+            console.error('Erro durante a leitura da IA:', event.error)
+            setIsSpeaking(false)
+            setStatus('Não foi possível realizar a leitura.')
+          }
+        }
+      )
+    } catch (error) {
+      console.error('Erro ao iniciar leitura da IA:', error)
+      setIsSpeaking(false)
+      setStatus(error.message)
     }
   }
 
@@ -889,6 +1022,20 @@ function App() {
             Parar leitura
           </button>
         </div>
+      )}
+
+      {analysis && (
+        <AISummaryPanel
+          configured={isAISummaryConfigured()}
+          loading={isGeneratingAISummary}
+          result={aiSummaryResult}
+          onGenerate={handleGenerateAISummary}
+          onRead={handleReadAISummary}
+          onLocate={(element) => {
+            void handleLocateAIElement(element)
+          }}
+          isSpeaking={isSpeaking}
+        />
       )}
 
       {analysis && (

@@ -1,16 +1,41 @@
-# React + Vite
+# Extensão V.Inc Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Extensão para navegadores Chromium construída com React, Vite e Manifest V3.
+Ela analisa elementos visíveis da aba ativa, oferece navegação assistida e pode
+gerar um resumo contextual com inteligência artificial.
 
-Currently, two official plugins are available:
+## Desenvolvimento
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Para gerar a versão carregada pelo navegador:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run lint
+npm run build
+```
 
-## Expanding the ESLint configuration
+Depois, abra `chrome://extensions`, ative o modo do desenvolvedor e carregue a
+pasta `extension/dist` como extensão sem compactação.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Resumo com IA
+
+A análise estrutural permanece local. O conteúdo textual da página só é enviado
+quando o usuário seleciona **Gerar resumo com IA**. Campos de formulário e seus
+valores não são coletados.
+
+1. Copie `.env.example` para `.env`.
+2. Informe a URL da função implantada no Supabase.
+3. Informe a chave pública do projeto Supabase.
+4. Execute novamente `npm run build`.
+
+```env
+VITE_AI_API_URL=https://SEU-PROJETO.supabase.co/functions/v1/summarize-page
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SUA_CHAVE_PUBLICA
+```
+
+A chave secreta da Groq deve existir somente no Supabase, nunca neste arquivo.
+O código da função está em `../supabase/functions/summarize-page`.
