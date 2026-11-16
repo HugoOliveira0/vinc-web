@@ -43,6 +43,15 @@ export const isAISummaryConfigured = () => {
   return Boolean(endpoint && publishableKey)
 }
 
+const createAIRequestError = (response, responseData, fallbackMessage) => {
+  const error = new Error(responseData?.error || fallbackMessage)
+  error.status = response.status
+  error.retryAfter = Number(
+    responseData?.retryAfter || response.headers.get('retry-after') || 0
+  )
+  return error
+}
+
 export const generateAISummary = async ({
   page,
   elements,
@@ -70,8 +79,9 @@ export const generateAISummary = async ({
   const responseData = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(
-      responseData?.error ||
+    throw createAIRequestError(
+      response,
+      responseData,
       'O serviço de IA não conseguiu gerar o resumo.'
     )
   }
@@ -88,11 +98,76 @@ export const generateAISummary = async ({
   }
 }
 
+const maxQuestionTextLength = 8000
+const initialQuestionContextLength = 3500
+const ignoredQuestionWords = new Set([
+  'a', 'as', 'o', 'os', 'de', 'da', 'das', 'do', 'dos', 'e', 'em',
+  'um', 'uma', 'para', 'por', 'que', 'qual', 'quais', 'como', 'sobre',
+  'esta', 'este', 'essa', 'esse', 'pagina', 'página'
+])
+
+const normalizeSearchText = (text) => {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+}
+
+const createQuestionContext = (text, question) => {
+  if (text.length <= maxQuestionTextLength) {
+    return text
+  }
+
+  const questionTokens = normalizeSearchText(question)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 2 && !ignoredQuestionWords.has(token))
+
+  const initialContext = text.slice(0, initialQuestionContextLength)
+  const chunks = text
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+
+  const relevantChunks = chunks
+    .map((chunk, index) => {
+      const normalizedChunk = normalizeSearchText(chunk)
+      const score = questionTokens.reduce((total, token) => {
+        return total + (normalizedChunk.includes(token) ? 1 : 0)
+      }, 0)
+
+      return { chunk, index, score }
+    })
+    .filter(({ score }) => score > 0)
+    .sort((first, second) => {
+      return second.score - first.score || first.index - second.index
+    })
+
+  const selectedChunks = []
+  const selectedText = new Set()
+  let currentLength = initialContext.length
+
+  for (const { chunk } of relevantChunks) {
+    if (
+      selectedText.has(chunk) ||
+      currentLength + chunk.length > maxQuestionTextLength
+    ) {
+      continue
+    }
+
+    selectedChunks.push(chunk)
+    selectedText.add(chunk)
+    currentLength += chunk.length + 1
+  }
+
+  return [initialContext, ...selectedChunks]
+    .join('\n')
+    .slice(0, maxQuestionTextLength)
+}
+
 export const askPageQuestion = async ({
   page,
   elements,
   question,
-  summary,
   signal
 }) => {
   const { endpoint, publishableKey } = getConfiguration()
@@ -112,10 +187,12 @@ export const askPageQuestion = async ({
     },
     body: JSON.stringify({
       mode: 'question',
-      page,
+      page: {
+        ...page,
+        text: createQuestionContext(page.text, question)
+      },
       elements,
-      question,
-      summary: summary || ''
+      question
     }),
     signal
   })
@@ -123,8 +200,9 @@ export const askPageQuestion = async ({
   const responseData = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(
-      responseData?.error ||
+    throw createAIRequestError(
+      response,
+      responseData,
       'O serviço de IA não conseguiu responder à pergunta.'
     )
   }

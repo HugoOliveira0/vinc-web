@@ -80,6 +80,78 @@ const normalizeReferencedElements = (
     }))
 }
 
+const normalizeComparisonText = (text: string) => {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+const removeRepeatedGeneratedText = (text: string) => {
+  const trimmedText = text.trim()
+  const prefixLength = Math.min(80, Math.floor(trimmedText.length / 3))
+  const prefix = trimmedText.slice(0, prefixLength)
+
+  if (prefix.length >= 30) {
+    const repeatIndex = trimmedText.indexOf(prefix, prefix.length)
+
+    if (repeatIndex > 0) {
+      const firstPart = trimmedText.slice(0, repeatIndex)
+      const secondPart = trimmedText.slice(repeatIndex)
+
+      if (
+        normalizeComparisonText(firstPart) ===
+        normalizeComparisonText(secondPart)
+      ) {
+        return firstPart.trim()
+      }
+    }
+  }
+
+  const seenParagraphs = new Set<string>()
+
+  return trimmedText
+    .split(/\n{2,}/)
+    .filter((paragraph) => {
+      const normalizedParagraph = normalizeComparisonText(paragraph)
+
+      if (!normalizedParagraph || seenParagraphs.has(normalizedParagraph)) {
+        return false
+      }
+
+      seenParagraphs.add(normalizedParagraph)
+      return true
+    })
+    .join('\n\n')
+}
+
+const parseResetSeconds = (value: string | null) => {
+  if (!value) {
+    return 0
+  }
+
+  const numericValue = Number(value)
+
+  if (Number.isFinite(numericValue)) {
+    return Math.ceil(numericValue)
+  }
+
+  let seconds = 0
+
+  for (const match of value.matchAll(/([\d.]+)\s*(ms|s|m|h)/gi)) {
+    const amount = Number(match[1])
+    const unit = match[2].toLowerCase()
+    const multiplier = unit === 'h'
+      ? 3600
+      : unit === 'm'
+        ? 60
+        : unit === 'ms'
+          ? 0.001
+          : 1
+
+    seconds += amount * multiplier
+  }
+
+  return Math.ceil(seconds)
+}
+
 const parseModelResponse = (
   responseText: string,
   elements: ElementCatalog
@@ -102,7 +174,7 @@ const parseModelResponse = (
   )
 
   return {
-    summary: parsed.summary.trim().slice(0, 3000),
+    summary: removeRepeatedGeneratedText(parsed.summary).slice(0, 3000),
     keyElements
   }
 }
@@ -123,7 +195,7 @@ const parseQuestionResponse = (
   }
 
   return {
-    answer: parsed.answer.trim().slice(0, 2500),
+    answer: removeRepeatedGeneratedText(parsed.answer).slice(0, 2500),
     referencedElements: normalizeReferencedElements(
       parsed.referencedElements,
       elements,
@@ -155,8 +227,7 @@ Deno.serve(async (request) => {
       mode = 'summary',
       page,
       elements,
-      question,
-      summary
+      question
     } = await request.json()
 
     if (mode !== 'summary' && mode !== 'question') {
@@ -220,10 +291,7 @@ Deno.serve(async (request) => {
       },
       elements: safeElements,
       ...(mode === 'question' && {
-        question: question.trim(),
-        previousSummary: typeof summary === 'string'
-          ? summary.trim().slice(0, 3000)
-          : ''
+        question: question.trim()
       })
     }
 
@@ -299,10 +367,25 @@ Deno.serve(async (request) => {
       )
 
       if (groqResponse.status === 429) {
+        const retryAfter = Math.min(
+          Math.max(
+            parseResetSeconds(groqResponse.headers.get('retry-after')),
+            parseResetSeconds(
+              groqResponse.headers.get('x-ratelimit-reset-tokens')
+            ),
+            parseResetSeconds(
+              groqResponse.headers.get('x-ratelimit-reset-requests')
+            ),
+            10
+          ),
+          300
+        )
+
         return jsonResponse(
           {
             error:
-              'O limite temporário da IA foi atingido. Aguarde alguns segundos.'
+              `O limite temporário da IA foi atingido. Aguarde ${retryAfter} segundos.`,
+            retryAfter
           },
           429
         )

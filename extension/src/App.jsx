@@ -104,6 +104,27 @@ function App() {
   const questionRecognitionRef = useRef(null)
   const autoAnalyzeTimerRef = useRef(null)
   const aiRequestControllerRef = useRef(null)
+  const aiCooldownUntilRef = useRef(0)
+
+  const getRemainingAICooldown = () => {
+    return Math.max(
+      Math.ceil((aiCooldownUntilRef.current - Date.now()) / 1000),
+      0
+    )
+  }
+
+  const handleAIRateLimit = (error) => {
+    if (error?.status !== 429) {
+      return false
+    }
+
+    const retryAfter = Math.max(Number(error.retryAfter) || 10, 5)
+    aiCooldownUntilRef.current = Date.now() + retryAfter * 1000
+    setStatus(
+      `O limite temporário da IA foi atingido. Aguarde ${retryAfter} segundos.`
+    )
+    return true
+  }
 
   useEffect(() => {
     return () => {
@@ -605,6 +626,15 @@ function App() {
         return
       }
 
+      const remainingCooldown = getRemainingAICooldown()
+
+      if (remainingCooldown > 0) {
+        setStatus(
+          `Aguarde ${remainingCooldown} segundos antes de consultar a IA novamente.`
+        )
+        return
+      }
+
       setStatus('Gerando resumo com IA...')
 
       const result = await generateAISummary({
@@ -632,7 +662,10 @@ function App() {
       }
 
       console.error('Erro ao gerar resumo com IA:', error)
-      setStatus(error.message || 'Não foi possível gerar o resumo com IA.')
+
+      if (!handleAIRateLimit(error)) {
+        setStatus(error.message || 'Não foi possível gerar o resumo com IA.')
+      }
     } finally {
       if (aiRequestControllerRef.current === requestController) {
         aiRequestControllerRef.current = null
@@ -757,6 +790,15 @@ function App() {
       let recoveredFromCache = true
 
       if (!result) {
+        const remainingCooldown = getRemainingAICooldown()
+
+        if (remainingCooldown > 0) {
+          setStatus(
+            `Aguarde ${remainingCooldown} segundos antes de consultar a IA novamente.`
+          )
+          return
+        }
+
         recoveredFromCache = false
         setStatus('Consultando a página com IA...')
 
@@ -764,7 +806,6 @@ function App() {
           page: pageContent,
           elements: elementCatalog,
           question: normalizedQuestion,
-          summary: aiSummaryResult?.summary,
           signal: requestController.signal
         })
 
@@ -801,7 +842,10 @@ function App() {
       }
 
       console.error('Erro ao perguntar sobre a página:', error)
-      setStatus(error.message || 'Não foi possível responder à pergunta.')
+
+      if (!handleAIRateLimit(error)) {
+        setStatus(error.message || 'Não foi possível responder à pergunta.')
+      }
     } finally {
       if (aiRequestControllerRef.current === requestController) {
         aiRequestControllerRef.current = null
