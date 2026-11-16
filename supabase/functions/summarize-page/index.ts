@@ -165,9 +165,11 @@ Deno.serve(async (request) => {
           Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: Deno.env.get('GROQ_MODEL') || 'llama-3.3-70b-versatile',
+          model: Deno.env.get('GROQ_MODEL') || 'openai/gpt-oss-20b',
           temperature: 0.2,
           max_completion_tokens: 700,
+          reasoning_effort: 'low',
+          response_format: { type: 'json_object' },
           messages: [
             {
               role: 'system',
@@ -199,7 +201,24 @@ Deno.serve(async (request) => {
     const groqData = await groqResponse.json()
 
     if (!groqResponse.ok) {
-      console.error('Erro da Groq:', groqResponse.status)
+      const providerMessage = groqData?.error?.message || ''
+
+      console.error(
+        'Erro da Groq:',
+        groqResponse.status,
+        providerMessage.slice(0, 300)
+      )
+
+      if (groqResponse.status === 429) {
+        return jsonResponse(
+          {
+            error:
+              'O limite temporário da IA foi atingido. Aguarde alguns segundos.'
+          },
+          429
+        )
+      }
+
       return jsonResponse(
         { error: 'O provedor de IA não conseguiu processar a página.' },
         502

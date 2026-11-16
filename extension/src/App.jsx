@@ -13,6 +13,10 @@ import {
   isAISummaryConfigured
 } from './services/aiSummary'
 import {
+  cacheAISummary,
+  getCachedAISummary
+} from './services/aiSummaryCache'
+import {
   locateHeading,
   locateLink,
   locateButton,
@@ -220,6 +224,12 @@ function App() {
     const scheduleAnalysis = (tab) => {
       window.clearTimeout(autoAnalyzeTimerRef.current)
 
+      aiRequestControllerRef.current?.abort()
+      aiRequestControllerRef.current = null
+      setIsGeneratingAISummary(false)
+      setAISummaryResult(null)
+      setAnalysis(null)
+
       if (!canAnalyzeTab(tab)) {
         if (tab?.active) {
           setAnalysis(null)
@@ -228,6 +238,8 @@ function App() {
 
         return
       }
+
+      setStatus('Aguardando a nova página carregar...')
 
       autoAnalyzeTimerRef.current = window.setTimeout(() => {
         void handleAnalyze()
@@ -532,6 +544,15 @@ function App() {
     const requestController = new AbortController()
     aiRequestControllerRef.current = requestController
 
+    const isRequestTabActive = async () => {
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      return activeTab.id === tab.id
+    }
+
     setAISummaryResult(null)
     setIsGeneratingAISummary(true)
     setStatus('Preparando conteúdo para o resumo com IA...')
@@ -545,18 +566,45 @@ function App() {
         )
       }
 
+      const elementCatalog = createElementCatalog(analysis)
+      const cachedSummary = await getCachedAISummary(
+        pageContent,
+        elementCatalog
+      )
+
+      if (!(await isRequestTabActive())) {
+        return
+      }
+
+      if (cachedSummary.result) {
+        setAISummaryResult(cachedSummary.result)
+        setStatus('Resumo recuperado do cache temporário.')
+        return
+      }
+
       setStatus('Gerando resumo com IA...')
 
       const result = await generateAISummary({
         page: pageContent,
-        elements: createElementCatalog(analysis),
+        elements: elementCatalog,
         signal: requestController.signal
       })
 
+      if (!(await isRequestTabActive())) {
+        return
+      }
+
       setAISummaryResult(result)
+
+      try {
+        await cacheAISummary(cachedSummary.fingerprint, result)
+      } catch (cacheError) {
+        console.warn('Não foi possível salvar o cache da IA:', cacheError)
+      }
+
       setStatus('Resumo com IA concluído.')
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error?.name === 'AbortError') {
         return
       }
 

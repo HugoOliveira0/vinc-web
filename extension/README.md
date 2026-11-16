@@ -27,6 +27,10 @@ A análise estrutural permanece local. O conteúdo textual da página só é env
 quando o usuário seleciona **Gerar resumo com IA**. Campos de formulário e seus
 valores não são coletados.
 
+Os resumos são mantidos temporariamente em `chrome.storage.session` por até 30
+minutos. O cache armazena somente o resultado e os índices validados, nunca o
+texto completo coletado da página.
+
 1. Copie `.env.example` para `.env`.
 2. Informe a URL da função implantada no Supabase.
 3. Informe a chave pública do projeto Supabase.

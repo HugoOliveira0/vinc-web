@@ -13,7 +13,7 @@ supabase secrets set GROQ_API_KEY=SUA_CHAVE_GROQ
 supabase functions deploy summarize-page
 ```
 
-O modelo padrão é `llama-3.3-70b-versatile`. Para substituí-lo sem alterar o
+O modelo padrão é `openai/gpt-oss-20b`. Para substituí-lo sem alterar o
 código:
 
 ```bash
