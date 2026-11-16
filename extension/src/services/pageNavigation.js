@@ -340,6 +340,99 @@ export const activateButton = (tabId, buttonId) => {
     return activateElement(tabId, 'data-vinc-button-id', buttonId)
 }
 
+const updateFieldInPage = (fieldId, value) => {
+    const field = document.querySelector(
+        `[data-vinc-field-id="${fieldId}"]`
+    )
+
+    if (!field) {
+        return { updated: false, reason: 'not-found' }
+    }
+
+    if (
+        field.disabled ||
+        field.getAttribute('aria-disabled') === 'true'
+    ) {
+        return { updated: false, reason: 'disabled' }
+    }
+
+    if (field.readOnly) {
+        return { updated: false, reason: 'readonly' }
+    }
+
+    const tagName = field.tagName.toLowerCase()
+    const blockedTypes = ['password', 'file', 'hidden']
+    const supportedInputTypes = [
+        'text',
+        'search',
+        'email',
+        'tel',
+        'url',
+        'number'
+    ]
+
+    if (
+        tagName === 'select' ||
+        blockedTypes.includes(field.type) ||
+        (
+            tagName === 'input' &&
+            !supportedInputTypes.includes(field.type || 'text')
+        ) ||
+        !['input', 'textarea'].includes(tagName)
+    ) {
+        return {
+            updated: false,
+            reason: blockedTypes.includes(field.type)
+                ? 'sensitive'
+                : 'unsupported'
+        }
+    }
+
+    const prototype = tagName === 'textarea'
+        ? window.HTMLTextAreaElement.prototype
+        : window.HTMLInputElement.prototype
+
+    const valueSetter = Object.getOwnPropertyDescriptor(
+        prototype,
+        'value'
+    )?.set
+
+    if (!valueSetter) {
+        return { updated: false, reason: 'unsupported' }
+    }
+
+    field.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    })
+
+    field.focus({ preventScroll: true })
+    valueSetter.call(field, value)
+
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+    field.dispatchEvent(new Event('change', { bubbles: true }))
+
+    return { updated: true }
+}
+
+const updateField = async (tabId, fieldId, value) => {
+    const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId },
+        args: [fieldId, value],
+        func: updateFieldInPage
+    })
+
+    return result
+}
+
+export const fillField = (tabId, fieldId, value) => {
+    return updateField(tabId, fieldId, value)
+}
+
+export const clearField = (tabId, fieldId) => {
+    return updateField(tabId, fieldId, '')
+}
+
 const scrollPageInPage = (direction) => {
     const distance = Math.max(window.innerHeight * 0.8, 300)
 

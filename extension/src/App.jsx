@@ -13,6 +13,8 @@ import {
   locateImage,
   activateLink,
   activateButton,
+  fillField,
+  clearField,
   scrollPage
 } from './services/pageNavigation'
 import { speakText, stopSpeech } from './services/speech'
@@ -611,6 +613,73 @@ function App() {
     }
   }
 
+  const handleFieldValueCommand = async ({
+    position,
+    value = '',
+    clear = false
+  }) => {
+    const fieldItems = analysis?.fieldItems || []
+    const itemIndex = position - 1
+
+    if (itemIndex < 0 || itemIndex >= fieldItems.length) {
+      setStatus(
+        `Não existe campo ${position} na lista. ` +
+        `${fieldItems.length} campos estão disponíveis.`
+      )
+      return
+    }
+
+    if (!clear && !value) {
+      setStatus('Informe o texto que deve ser inserido no campo.')
+      return
+    }
+
+    const tab = await getActiveAnalyzedTab()
+
+    if (!tab) {
+      return
+    }
+
+    setStatus(
+      clear
+        ? `Limpando campo ${position}...`
+        : `Preenchendo campo ${position}...`
+    )
+
+    try {
+      const result = clear
+        ? await clearField(tab.id, fieldItems[itemIndex].id)
+        : await fillField(tab.id, fieldItems[itemIndex].id, value)
+
+      if (result?.updated) {
+        updateNavigationIndex('field', itemIndex)
+        setStatus(
+          clear
+            ? `Campo ${position} limpo.`
+            : `Campo ${position} preenchido.`
+        )
+        return
+      }
+
+      const reasonMessages = {
+        disabled: `O campo ${position} está desabilitado.`,
+        readonly: `O campo ${position} é somente leitura.`,
+        sensitive:
+          'Por segurança, campos de senha e arquivo não são preenchidos.',
+        unsupported:
+          `O tipo do campo ${position} ainda não aceita preenchimento.`
+      }
+
+      setStatus(
+        reasonMessages[result?.reason] ||
+        `O campo ${position} não existe mais na página.`
+      )
+    } catch (error) {
+      console.error('Erro ao alterar campo:', error)
+      setStatus(`Não foi possível alterar o campo ${position}.`)
+    }
+  }
+
   const handleScrollCommand = async (direction) => {
     const tab = await getActiveAnalyzedTab()
 
@@ -642,7 +711,8 @@ function App() {
     if (parsedCommand.type === 'help') {
       setStatus(
         'Exemplos: próximo título, link anterior, botão 2, ' +
-        'clicar botão 2, abrir link 3, rolar pra baixo e ler resumo.'
+        'clicar botão 2, preencher campo 1 com Hugo, ' +
+        'rolar pra baixo e ler resumo.'
       )
       return
     }
@@ -670,6 +740,17 @@ function App() {
 
       case 'activate-element':
         await handleActivateCommand(parsedCommand)
+        break
+
+      case 'fill-field':
+        await handleFieldValueCommand(parsedCommand)
+        break
+
+      case 'clear-field':
+        await handleFieldValueCommand({
+          ...parsedCommand,
+          clear: true
+        })
         break
 
       case 'scroll':
@@ -865,6 +946,9 @@ function App() {
               </li>
               <li>título, link, botão, campo ou imagem seguido do número;</li>
               <li>clicar botão 2 ou abrir link 3;</li>
+              <li>
+                preencher campo 1 com texto ou limpar campo 1;
+              </li>
               <li>
                 rolar pra cima/baixo ou subir/descer página.
               </li>

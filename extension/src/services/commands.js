@@ -60,6 +60,10 @@ const parsePosition = (positionText) => {
   return numberWords[positionText] || Number(positionText)
 }
 
+const getFillValue = (commandText, pattern) => {
+  return commandText.trim().match(pattern)?.[1]?.trim() || ''
+}
+
 export const parseCommand = (commandText) => {
   const command = normalizeCommand(commandText)
 
@@ -121,6 +125,56 @@ export const parseCommand = (commandText) => {
     ['pagina para cima', 'ir para cima', 'subir'].includes(command)
   ) {
     return { type: 'scroll', direction: 'up' }
+  }
+
+  const fillWithMatch = command.match(
+    new RegExp(
+      `^(?:preencher|preencha|preenche) (?:(?:o|no) )?` +
+      `campo ${positionPattern} com (.+)$`
+    )
+  )
+
+  if (fillWithMatch) {
+    return {
+      type: 'fill-field',
+      position: parsePosition(fillWithMatch[1]),
+      value: getFillValue(
+        commandText,
+        /^\s*(?:preencher|preencha|preenche)\s+(?:(?:o|no)\s+)?campo\s+\S+\s+com\s+(.+)$/iu
+      )
+    }
+  }
+
+  const typeInMatch = command.match(
+    new RegExp(
+      `^(?:digitar|digite|digita|escrever|escreva|escreve) ` +
+      `(.+) (?:no|em) campo ${positionPattern}$`
+    )
+  )
+
+  if (typeInMatch) {
+    return {
+      type: 'fill-field',
+      position: parsePosition(typeInMatch[2]),
+      value: getFillValue(
+        commandText,
+        /^\s*(?:digitar|digite|digita|escrever|escreva|escreve)\s+(.+?)\s+(?:no|em)\s+campo\s+\S+\s*$/iu
+      )
+    }
+  }
+
+  const clearMatch = command.match(
+    new RegExp(
+      `^(?:limpar|limpe|limpa|apagar|apague|apaga) ` +
+      `(?:(?:o|no) )?campo ${positionPattern}$`
+    )
+  )
+
+  if (clearMatch) {
+    return {
+      type: 'clear-field',
+      position: parsePosition(clearMatch[1])
+    }
   }
 
   const activationMatch = command.match(
