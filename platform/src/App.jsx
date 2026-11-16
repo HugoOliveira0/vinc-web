@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 const features = [
   {
     number: '01',
@@ -41,6 +43,24 @@ const commands = [
 ]
 
 function App() {
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const closeMenuWithEscape = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', closeMenuWithEscape)
+
+    return () => {
+      document.removeEventListener('keydown', closeMenuWithEscape)
+    }
+  }, [])
+
+  const closeMenu = () => setMenuOpen(false)
+
   return (
     <>
       <a className="skip-link" href="#conteudo">
@@ -53,11 +73,30 @@ function App() {
           <span>V.Inc Web</span>
         </a>
 
-        <nav aria-label="Navegação principal">
-          <a href="#recursos">Recursos</a>
-          <a href="#funcionamento">Como funciona</a>
-          <a href="#comandos">Comandos</a>
-          <a href="#instalacao">Instalação</a>
+        <button
+          className="nav-toggle"
+          type="button"
+          aria-expanded={menuOpen}
+          aria-controls="site-navigation"
+          aria-label={menuOpen ? 'Fechar menu de navegação' : 'Abrir menu de navegação'}
+          onClick={() => setMenuOpen((isOpen) => !isOpen)}
+        >
+          <span className="nav-toggle-icon" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+
+        <nav
+          id="site-navigation"
+          className={`site-navigation${menuOpen ? ' is-open' : ''}`}
+          aria-label="Navegação principal"
+        >
+          <a href="#recursos" onClick={closeMenu}>Recursos</a>
+          <a href="#funcionamento" onClick={closeMenu}>Como funciona</a>
+          <a href="#comandos" onClick={closeMenu}>Comandos</a>
+          <a href="#instalacao" onClick={closeMenu}>Instalação</a>
         </nav>
       </header>
 
