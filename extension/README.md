@@ -22,6 +22,16 @@ npm run build
 Depois, abra `chrome://extensions`, ative o modo do desenvolvedor e carregue a
 pasta `extension/dist` como extensão sem compactação.
 
+## Auditoria de acessibilidade
+
+A extensão realiza uma triagem local da página e verifica título do documento,
+idioma, presença e hierarquia de H1 a H6, nomes acessíveis de links e botões,
+rótulos de campos e alternativas textuais de imagens. Os problemas associados
+a elementos visíveis podem ser selecionados para localização e destaque.
+
+A triagem é um apoio automatizado e não representa certificação de conformidade
+com as WCAG nem substitui testes manuais com tecnologias assistivas.
+
 ## Resumo com IA
 
 A análise estrutural permanece local. O conteúdo textual da página só é enviado

@@ -49,13 +49,17 @@ const collectPageData = () => {
         link.removeAttribute('data-vinc-link-id')
     })
 
-    const getLinkText = (link) => {
+    const getLinkAccessibleName = (link) => {
         return (
             link.innerText.trim() ||
             link.getAttribute('aria-label')?.trim() ||
             link.getAttribute('title')?.trim() ||
-            'Link sem descrição'
+            ''
         )
+    }
+
+    const getLinkText = (link) => {
+        return getLinkAccessibleName(link) || 'Link sem descrição'
     }
 
     const linkElements = allLinks.filter((link) => {
@@ -76,14 +80,18 @@ const collectPageData = () => {
         button.removeAttribute('data-vinc-button-id')
     })
 
-    const getButtonText = (button) => {
+    const getButtonAccessibleName = (button) => {
         return (
             button.innerText?.trim() ||
             button.getAttribute('aria-label')?.trim() ||
             button.getAttribute('title')?.trim() ||
             button.value?.trim() ||
-            'Botão sem descrição'
+            ''
         )
+    }
+
+    const getButtonText = (button) => {
+        return getButtonAccessibleName(button) || 'Botão sem descrição'
     }
 
     const buttonElements = allButtons.filter((button) => {
@@ -104,7 +112,7 @@ const collectPageData = () => {
         field.removeAttribute('data-vinc-field-id')
     })
 
-    const getFieldLabel = (field) => {
+    const getFieldAccessibleLabel = (field) => {
         const labelText = [...(field.labels || [])]
             .map((label) => label.innerText.trim())
             .filter(Boolean)
@@ -120,6 +128,13 @@ const collectPageData = () => {
             labelText ||
             field.getAttribute('aria-label')?.trim() ||
             labelledByText ||
+            ''
+        )
+    }
+
+    const getFieldLabel = (field) => {
+        return (
+            getFieldAccessibleLabel(field) ||
             field.getAttribute('placeholder')?.trim() ||
             field.getAttribute('name')?.trim() ||
             'Campo sem descrição'
@@ -178,6 +193,7 @@ const collectPageData = () => {
 
     return {
         title: document.title,
+        language: document.documentElement.lang?.trim() || '',
 
         headings: headingElements.length,
 
@@ -196,7 +212,8 @@ const collectPageData = () => {
             .map((link) => ({
                 id: link.dataset.vincLinkId,
                 text: getLinkText(link),
-                url: link.href
+                url: link.href,
+                hasAccessibleName: Boolean(getLinkAccessibleName(link))
             })),
 
         buttons: buttonElements.length,
@@ -205,7 +222,8 @@ const collectPageData = () => {
             .slice(0, maxItemsPerCategory)
             .map((button) => ({
                 id: button.dataset.vincButtonId,
-                text: getButtonText(button)
+                text: getButtonText(button),
+                hasAccessibleName: Boolean(getButtonAccessibleName(button))
             })),
 
         fields: fieldElements.length,
@@ -216,6 +234,7 @@ const collectPageData = () => {
                 id: field.dataset.vincFieldId,
                 label: getFieldLabel(field),
                 type: getFieldType(field),
+                hasAccessibleLabel: Boolean(getFieldAccessibleLabel(field)),
                 required: field.required,
                 disabled: field.disabled
             })),

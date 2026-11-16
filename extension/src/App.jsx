@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import AccessibilitySettings from './components/AccessibilitySettings'
+import AccessibilityAuditPanel from './components/AccessibilityAuditPanel'
 import AISummaryPanel from './components/AISummaryPanel'
 import PageQuestionPanel from './components/PageQuestionPanel'
 import ResultSection from './components/ResultSection'
 import { truncateText } from './utils/text'
 import { filterAnalysisResults } from './utils/filterResults'
 import { analyzePage } from './services/pageAnalysis'
+import { createAccessibilityAudit } from './services/accessibilityAudit'
 import { collectPageContent } from './services/pageContent'
 import {
   createElementCatalog,
@@ -240,6 +242,10 @@ function App() {
   const filteredResults = useMemo(() => {
     return filterAnalysisResults(analysis, resultSearch)
   }, [analysis, resultSearch])
+
+  const accessibilityAudit = useMemo(() => {
+    return createAccessibilityAudit(analysis)
+  }, [analysis])
 
   const filteredResultCount = Object.values(filteredResults)
     .reduce((total, items) => total + items.length, 0)
@@ -680,7 +686,7 @@ function App() {
     const item = config?.items[itemIndex]
 
     if (!config || !item) {
-      setStatus('O elemento indicado pela IA não está mais disponível.')
+      setStatus('O elemento indicado não está mais disponível.')
       return
     }
 
@@ -1356,6 +1362,15 @@ function App() {
             Parar leitura
           </button>
         </div>
+      )}
+
+      {analysis && (
+        <AccessibilityAuditPanel
+          audit={accessibilityAudit}
+          onLocate={(element) => {
+            void handleLocateAIElement(element)
+          }}
+        />
       )}
 
       {analysis && (
