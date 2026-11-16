@@ -1,8 +1,9 @@
 # Extensão V.Inc Web
 
 Extensão para navegadores Chromium construída com React, Vite e Manifest V3.
-Ela analisa elementos visíveis da aba ativa, oferece navegação assistida e pode
-gerar um resumo contextual com inteligência artificial.
+Ela analisa elementos visíveis da aba ativa, oferece navegação assistida, gera
+um resumo contextual e responde perguntas sobre a página com inteligência
+artificial.
 
 ## Desenvolvimento
 
@@ -24,12 +25,16 @@ pasta `extension/dist` como extensão sem compactação.
 ## Resumo com IA
 
 A análise estrutural permanece local. O conteúdo textual da página só é enviado
-quando o usuário seleciona **Gerar resumo com IA**. Campos de formulário e seus
-valores não são coletados.
+quando o usuário solicita um resumo ou faz uma pergunta à IA. Campos de
+formulário e seus valores não são coletados.
 
-Os resumos são mantidos temporariamente em `chrome.storage.session` por até 30
-minutos. O cache armazena somente o resultado e os índices validados, nunca o
-texto completo coletado da página.
+Resumos e respostas são mantidos temporariamente em
+`chrome.storage.session` por até 30 minutos. O cache armazena somente os
+resultados e os índices validados, nunca o texto completo coletado da página.
+
+As perguntas podem ser digitadas ou ditadas. Quando a resposta cita um título,
+link, botão, campo ou imagem, a referência usa o mesmo índice da análise e pode
+ser selecionada para localizar o elemento na página.
 
 1. Copie `.env.example` para `.env`.
 2. Informe a URL da função implantada no Supabase.

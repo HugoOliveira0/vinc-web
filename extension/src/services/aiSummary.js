@@ -88,3 +88,56 @@ export const generateAISummary = async ({
   }
 }
 
+export const askPageQuestion = async ({
+  page,
+  elements,
+  question,
+  summary,
+  signal
+}) => {
+  const { endpoint, publishableKey } = getConfiguration()
+
+  if (!endpoint || !publishableKey) {
+    throw new Error(
+      'O serviço de IA ainda não foi configurado nesta versão da extensão.'
+    )
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: publishableKey,
+      Authorization: `Bearer ${publishableKey}`
+    },
+    body: JSON.stringify({
+      mode: 'question',
+      page,
+      elements,
+      question,
+      summary: summary || ''
+    }),
+    signal
+  })
+
+  const responseData = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      responseData?.error ||
+      'O serviço de IA não conseguiu responder à pergunta.'
+    )
+  }
+
+  if (!responseData?.answer) {
+    throw new Error('O serviço de IA retornou uma resposta inválida.')
+  }
+
+  return {
+    answer: responseData.answer,
+    referencedElements: Array.isArray(responseData.referencedElements)
+      ? responseData.referencedElements
+      : []
+  }
+}
+

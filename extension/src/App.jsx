@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import AccessibilitySettings from './components/AccessibilitySettings'
 import AISummaryPanel from './components/AISummaryPanel'
+import PageQuestionPanel from './components/PageQuestionPanel'
 import ResultSection from './components/ResultSection'
 import { truncateText } from './utils/text'
 import { filterAnalysisResults } from './utils/filterResults'
@@ -10,11 +11,14 @@ import { collectPageContent } from './services/pageContent'
 import {
   createElementCatalog,
   generateAISummary,
+  askPageQuestion,
   isAISummaryConfigured
 } from './services/aiSummary'
 import {
   cacheAISummary,
-  getCachedAISummary
+  getCachedAISummary,
+  cacheAIAnswer,
+  getCachedAIAnswer
 } from './services/aiSummaryCache'
 import {
   locateHeading,
@@ -81,6 +85,10 @@ function App() {
   const [preferences, setPreferences] = useState(defaultPreferences)
   const [aiSummaryResult, setAISummaryResult] = useState(null)
   const [isGeneratingAISummary, setIsGeneratingAISummary] = useState(false)
+  const [pageQuestion, setPageQuestion] = useState('')
+  const [pageQuestionHistory, setPageQuestionHistory] = useState([])
+  const [isAskingPage, setIsAskingPage] = useState(false)
+  const [isListeningQuestion, setIsListeningQuestion] = useState(false)
 
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isListening, setIsListening] = useState(false)
@@ -93,6 +101,7 @@ function App() {
     createNavigationIndexes
   )
   const recognitionRef = useRef(null)
+  const questionRecognitionRef = useRef(null)
   const autoAnalyzeTimerRef = useRef(null)
   const aiRequestControllerRef = useRef(null)
 
@@ -100,6 +109,7 @@ function App() {
     return () => {
       stopSpeech()
       recognitionRef.current?.abort()
+      questionRecognitionRef.current?.abort()
       aiRequestControllerRef.current?.abort()
     }
   }, [])
@@ -165,6 +175,9 @@ function App() {
     recognitionRef.current?.abort()
     recognitionRef.current = null
     setIsListening(false)
+    questionRecognitionRef.current?.abort()
+    questionRecognitionRef.current = null
+    setIsListeningQuestion(false)
     setNavigationIndexes(createNavigationIndexes())
     setResultSearch('')
     setVisibleResultCounts(createVisibleResultCounts())
@@ -172,6 +185,9 @@ function App() {
     aiRequestControllerRef.current = null
     setAISummaryResult(null)
     setIsGeneratingAISummary(false)
+    setPageQuestion('')
+    setPageQuestionHistory([])
+    setIsAskingPage(false)
 
     // Limpando resultado anterior
     setAnalysis(null)
@@ -228,6 +244,12 @@ function App() {
       aiRequestControllerRef.current = null
       setIsGeneratingAISummary(false)
       setAISummaryResult(null)
+      questionRecognitionRef.current?.abort()
+      questionRecognitionRef.current = null
+      setIsListeningQuestion(false)
+      setIsAskingPage(false)
+      setPageQuestion('')
+      setPageQuestionHistory([])
       setAnalysis(null)
 
       if (!canAnalyzeTab(tab)) {
@@ -540,6 +562,7 @@ function App() {
     }
 
     aiRequestControllerRef.current?.abort()
+    setIsAskingPage(false)
 
     const requestController = new AbortController()
     aiRequestControllerRef.current = requestController
@@ -669,6 +692,222 @@ function App() {
     } catch (error) {
       console.error('Erro ao iniciar leitura da IA:', error)
       setIsSpeaking(false)
+      setStatus(error.message)
+    }
+  }
+
+  const handleAskPage = async (question = pageQuestion) => {
+    const normalizedQuestion = question.trim()
+
+    if (!normalizedQuestion) {
+      setStatus('Digite uma pergunta antes de consultar a IA.')
+      return
+    }
+
+    if (!isAISummaryConfigured()) {
+      setStatus('O serviço de IA ainda não foi configurado.')
+      return
+    }
+
+    const tab = await getActiveAnalyzedTab()
+
+    if (!tab) {
+      return
+    }
+
+    aiRequestControllerRef.current?.abort()
+    setIsGeneratingAISummary(false)
+
+    const requestController = new AbortController()
+    aiRequestControllerRef.current = requestController
+
+    const isRequestTabActive = async () => {
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+
+      return activeTab.id === tab.id
+    }
+
+    setIsAskingPage(true)
+    setStatus('Preparando conteúdo para responder à pergunta...')
+
+    try {
+      const pageContent = await collectPageContent(tab.id)
+
+      if (!pageContent?.text || pageContent.text.length < 80) {
+        throw new Error(
+          'A página não possui texto visível suficiente para responder.'
+        )
+      }
+
+      const elementCatalog = createElementCatalog(analysis)
+      const cachedAnswer = await getCachedAIAnswer(
+        pageContent,
+        elementCatalog,
+        normalizedQuestion
+      )
+
+      if (!(await isRequestTabActive())) {
+        return
+      }
+
+      let result = cachedAnswer.result
+      let recoveredFromCache = true
+
+      if (!result) {
+        recoveredFromCache = false
+        setStatus('Consultando a página com IA...')
+
+        result = await askPageQuestion({
+          page: pageContent,
+          elements: elementCatalog,
+          question: normalizedQuestion,
+          summary: aiSummaryResult?.summary,
+          signal: requestController.signal
+        })
+
+        if (!(await isRequestTabActive())) {
+          return
+        }
+
+        try {
+          await cacheAIAnswer(cachedAnswer.fingerprint, result)
+        } catch (cacheError) {
+          console.warn(
+            'Não foi possível salvar o cache da pergunta:',
+            cacheError
+          )
+        }
+      }
+
+      setPageQuestionHistory((currentHistory) => [
+        ...currentHistory,
+        {
+          question: normalizedQuestion,
+          ...result
+        }
+      ].slice(-5))
+      setPageQuestion('')
+      setStatus(
+        recoveredFromCache
+          ? 'Resposta recuperada do cache temporário.'
+          : 'Pergunta respondida pela IA.'
+      )
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        return
+      }
+
+      console.error('Erro ao perguntar sobre a página:', error)
+      setStatus(error.message || 'Não foi possível responder à pergunta.')
+    } finally {
+      if (aiRequestControllerRef.current === requestController) {
+        aiRequestControllerRef.current = null
+        setIsAskingPage(false)
+      }
+    }
+  }
+
+  const handlePageQuestionSubmit = (event) => {
+    event.preventDefault()
+    void handleAskPage()
+  }
+
+  const handleReadPageAnswer = (entry) => {
+    if (!entry?.answer) {
+      setStatus('Ainda não existe uma resposta para leitura.')
+      return
+    }
+
+    const referencedElementsText = entry.referencedElements
+      .map((element) => {
+        return (
+          `${aiElementTypeNames[element.type]} ${element.index}: ` +
+          `${element.label}.`
+        )
+      })
+      .join(' ')
+
+    try {
+      setIsSpeaking(true)
+      setStatus('Preparando leitura da resposta...')
+
+      speakText(`${entry.answer} ${referencedElementsText}`.trim(), {
+        onStart: () => setStatus('Lendo a resposta da IA...'),
+        onEnd: () => {
+          setIsSpeaking(false)
+          setStatus('Leitura concluída.')
+        },
+        onError: (event) => {
+          console.error('Erro durante a leitura da resposta:', event.error)
+          setIsSpeaking(false)
+          setStatus('Não foi possível realizar a leitura.')
+        }
+      })
+    } catch (error) {
+      console.error('Erro ao iniciar leitura da resposta:', error)
+      setIsSpeaking(false)
+      setStatus(error.message)
+    }
+  }
+
+  const handleQuestionVoice = async () => {
+    if (isListeningQuestion) {
+      questionRecognitionRef.current?.stop()
+      setStatus('Finalizando reconhecimento...')
+      return
+    }
+
+    try {
+      stopSpeech()
+      setIsSpeaking(false)
+      questionRecognitionRef.current?.abort()
+      questionRecognitionRef.current = null
+      setIsListeningQuestion(false)
+      recognitionRef.current?.abort()
+      recognitionRef.current = null
+      setIsListening(false)
+
+      const hasMicrophonePermission = await requestMicrophonePermission()
+
+      if (!hasMicrophonePermission) {
+        setStatus('Autorize o microfone na aba aberta e tente novamente.')
+        return
+      }
+
+      const recognition = createSpeechRecognition({
+        onStart: () => {
+          setIsListeningQuestion(true)
+          setStatus('Ouvindo pergunta...')
+        },
+        onResult: (transcript) => {
+          if (!transcript) {
+            setStatus('Nenhuma fala foi identificada. Tente novamente.')
+            return
+          }
+
+          setPageQuestion(transcript)
+          setStatus(`Pergunta reconhecida: “${transcript}”.`)
+          void handleAskPage(transcript)
+        },
+        onEnd: () => {
+          setIsListeningQuestion(false)
+          questionRecognitionRef.current = null
+        },
+        onError: (event) => {
+          console.error('Erro no reconhecimento da pergunta:', event.error)
+          setIsListeningQuestion(false)
+          setStatus(getRecognitionErrorMessage(event.error))
+        }
+      })
+
+      questionRecognitionRef.current = recognition
+      recognition.start()
+    } catch (error) {
+      console.error('Erro ao reconhecer pergunta:', error)
+      setIsListeningQuestion(false)
       setStatus(error.message)
     }
   }
@@ -961,6 +1200,9 @@ function App() {
     try {
       stopSpeech()
       setIsSpeaking(false)
+      questionRecognitionRef.current?.abort()
+      questionRecognitionRef.current = null
+      setIsListeningQuestion(false)
 
       const hasMicrophonePermission =
         await requestMicrophonePermission()
@@ -1083,6 +1325,25 @@ function App() {
             void handleLocateAIElement(element)
           }}
           isSpeaking={isSpeaking}
+        />
+      )}
+
+      {analysis && (
+        <PageQuestionPanel
+          configured={isAISummaryConfigured()}
+          question={pageQuestion}
+          history={pageQuestionHistory}
+          loading={isAskingPage}
+          listening={isListeningQuestion}
+          speechSupported={isSpeechRecognitionSupported()}
+          isSpeaking={isSpeaking}
+          onQuestionChange={setPageQuestion}
+          onSubmit={handlePageQuestionSubmit}
+          onVoice={handleQuestionVoice}
+          onRead={handleReadPageAnswer}
+          onLocate={(element) => {
+            void handleLocateAIElement(element)
+          }}
         />
       )}
 
