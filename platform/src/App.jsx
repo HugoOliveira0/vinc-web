@@ -61,7 +61,7 @@ function App() {
         </nav>
       </header>
 
-      <main id="conteudo">
+      <main id="conteudo" tabIndex={-1}>
         <section className="hero" id="inicio" aria-labelledby="hero-title">
           <div className="hero-copy">
             <p className="eyebrow">Extensão para navegadores Chromium</p>
@@ -85,6 +85,9 @@ function App() {
                 rel="noreferrer"
               >
                 Ver código no GitHub
+                <span className="visually-hidden">
+                  {' '}(abre em uma nova aba)
+                </span>
               </a>
             </div>
 
@@ -95,11 +98,14 @@ function App() {
             </ul>
           </div>
 
-          <div className="product-preview" aria-label="Exemplo do painel da extensão">
+          <section
+            className="product-preview"
+            aria-labelledby="preview-title"
+          >
             <div className="preview-heading">
               <span className="preview-logo" aria-hidden="true">V</span>
               <div>
-                <strong>V.Inc Web</strong>
+                <strong id="preview-title">V.Inc Web</strong>
                 <span>Análise concluída</span>
               </div>
             </div>
@@ -119,7 +125,7 @@ function App() {
               <span>Comando</span>
               <code>próximo título</code>
             </div>
-          </div>
+          </section>
         </section>
 
         <section className="section" id="recursos" aria-labelledby="features-title">
@@ -191,14 +197,19 @@ function App() {
             </p>
           </div>
 
-          <div className="command-table" role="table" aria-label="Exemplos de comandos">
-            {commands.map(([category, command]) => (
-              <div className="command-row" role="row" key={command}>
-                <span role="cell">{category}</span>
-                <code role="cell">{command}</code>
-              </div>
-            ))}
-          </div>
+          <table className="command-table">
+            <caption className="visually-hidden">
+              Exemplos de comandos disponíveis
+            </caption>
+            <tbody>
+              {commands.map(([category, command]) => (
+                <tr className="command-row" key={command}>
+                  <th scope="row">{category}</th>
+                  <td><code>{command}</code></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
 
         <section className="section principles" aria-labelledby="principles-title">
@@ -263,6 +274,9 @@ function App() {
             rel="noreferrer"
           >
             Acessar repositório
+            <span className="visually-hidden">
+              {' '}(abre em uma nova aba)
+            </span>
           </a>
         </section>
       </main>
