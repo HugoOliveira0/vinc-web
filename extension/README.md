@@ -57,8 +57,18 @@ ser selecionada para localizar o elemento na página.
 
 ```env
 VITE_AI_API_URL=https://SEU-PROJETO.supabase.co/functions/v1/summarize-page
+VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SUA_CHAVE_PUBLICA
 ```
 
 A chave secreta da Groq deve existir somente no Supabase, nunca neste arquivo.
 O código da função está em `../supabase/functions/summarize-page`.
+
+## Conta e sincronização
+
+A conta é opcional. Quando autenticado, o usuário pode enviar as preferências
+atuais ou recuperar as preferências salvas. Nenhuma sincronização ocorre em
+segundo plano: cada operação depende de um botão explícito.
+
+A tabela `user_preferences` possui Row Level Security. Cada sessão autenticada
+pode consultar e modificar somente o registro associado ao próprio usuário.

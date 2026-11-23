@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import vincLogo from './assets/vinc_logo.svg'
 import AccessibilitySettings from './components/AccessibilitySettings'
+import AccountSyncPanel from './components/AccountSyncPanel'
 import AccessibilityAuditPanel from './components/AccessibilityAuditPanel'
 import AISummaryPanel from './components/AISummaryPanel'
 import PageQuestionPanel from './components/PageQuestionPanel'
@@ -190,6 +191,11 @@ function App() {
       console.error('Erro ao restaurar preferências:', error)
       setStatus('Não foi possível restaurar as preferências.')
     }
+  }
+
+  const handleApplySyncedPreferences = async (syncedPreferences) => {
+    setPreferences(syncedPreferences)
+    await savePreferences(syncedPreferences)
   }
 
   const handleAnalyze = useCallback(async () => {
@@ -1327,6 +1333,11 @@ function App() {
         preferences={preferences}
         onChange={handlePreferenceChange}
         onReset={handleResetPreferences}
+      />
+
+      <AccountSyncPanel
+        preferences={preferences}
+        onApplyPreferences={handleApplySyncedPreferences}
       />
 
       <button

@@ -252,6 +252,109 @@ button {
   background: var(--surface-hover);
 }
 
+.account-sync {
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.account-sync summary {
+  padding: 12px 14px;
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-sync[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.account-sync-content,
+.account-session,
+.account-form,
+.account-sync-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.account-sync-content {
+  padding: 14px;
+}
+
+.account-sync-content p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.account-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.account-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--interactive-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--background);
+  font: inherit;
+}
+
+.account-form input:focus-visible,
+.account-sync button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.account-sync button {
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--button-text);
+  background: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-sync button:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.account-sync button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.account-sync .account-mode-button,
+.account-sync-actions button:last-child {
+  color: var(--text);
+  background: var(--background);
+  border-color: var(--interactive-border);
+}
+
+.account-sync .account-mode-button:hover:not(:disabled),
+.account-sync-actions button:last-child:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--accent-hover);
+}
+
+.account-sync-content .account-status {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .analyze-button {
   width: 100%;
   min-height: 44px;
