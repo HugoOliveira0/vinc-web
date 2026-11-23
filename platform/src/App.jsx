@@ -30,6 +30,16 @@ const features = [
     number: '06',
     title: 'Preferências acessíveis',
     text: 'Salva tema, escala de texto e redução de movimento diretamente no navegador.'
+  },
+  {
+    number: '07',
+    title: 'Triagem de acessibilidade',
+    text: 'Aponta barreiras estruturais comuns e permite localizar os elementos relacionados.'
+  },
+  {
+    number: '08',
+    title: 'Resumo e perguntas com IA',
+    text: 'Processa o texto visível somente quando o usuário solicita e referencia itens da análise.'
   }
 ]
 
@@ -273,10 +283,11 @@ function App() {
               </p>
             </article>
             <article>
-              <h3>Dados locais</h3>
+              <h3>Minimização de dados</h3>
               <p>
-                A análise ocorre no navegador. A versão atual não transmite o
-                conteúdo visitado para serviços externos.
+                A análise ocorre no navegador. O texto visível só é enviado ao
+                serviço opcional de IA quando o usuário solicita; valores de
+                formulários não são coletados.
               </p>
             </article>
             <article>

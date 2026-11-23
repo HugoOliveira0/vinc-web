@@ -16,8 +16,12 @@ Para gerar a versão carregada pelo navegador:
 
 ```bash
 npm run lint
+npm test
 npm run build
 ```
+
+Os testes automatizados cobrem comandos, filtros, auditoria local, catálogo de
+elementos enviado à IA e cache temporário.
 
 Depois, abra `chrome://extensions`, ative o modo do desenvolvedor e carregue a
 pasta `extension/dist` como extensão sem compactação.

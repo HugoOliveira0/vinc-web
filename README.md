@@ -1,88 +1,91 @@
 # V.Inc Web
 
-O V.Inc Web é uma solução de acessibilidade digital composta por uma extensão de navegador e uma plataforma web. O projeto está sendo desenvolvido como Trabalho de Conclusão de Curso do curso Técnico em Informática para Internet da Etec Pedro Ferreira Alves.
+O V.Inc Web é uma solução complementar de acessibilidade digital composta
+por uma extensão para navegadores Chromium e uma plataforma web de apresentação
+e documentação. O projeto é desenvolvido como Trabalho de Conclusão de Curso
+do curso Técnico em Informática para Internet da Etec Pedro Ferreira Alves.
 
-## Objetivo
+## Estado atual
 
-O projeto tem como objetivo auxiliar a compreensão e a navegação em páginas da internet por meio da análise de sua estrutura semântica.
+A extensão já oferece:
 
-A extensão deverá identificar elementos como títulos, links, botões, formulários e imagens, permitindo que o usuário consulte e execute ações por comandos de texto, voz ou teclado.
+- análise automática da aba ativa permitida;
+- organização de títulos, links, botões, campos e imagens visíveis;
+- pesquisa e apresentação progressiva dos resultados;
+- localização por rolagem, foco e destaque de contraste adaptativo;
+- acionamento de links e botões e preenchimento seguro de campos;
+- comandos equivalentes por texto ou voz;
+- leitura por síntese de voz;
+- preferências locais de tema, escala de texto e redução de movimento;
+- triagem local de barreiras comuns de acessibilidade;
+- resumo e perguntas contextuais por inteligência artificial, mediante ação
+  explícita do usuário;
+- cache temporário de resumos e respostas por página.
 
-Entre os exemplos de interação previstos estão:
+A plataforma web apresenta o produto, seus recursos, comandos e instruções de
+instalação. Autenticação e sincronização consentida de preferências ainda
+estão planejadas. A descrição visual multimodal de imagens permanece como
+evolução futura.
 
-- listar os títulos da página;
-- localizar links e botões;
-- navegar até uma seção;
-- rolar a página;
-- ler conteúdos em voz alta;
-- explicar o contexto de elementos com nomes repetidos;
-- aplicar ajustes visuais;
-- solicitar a descrição de imagens.
+## Princípios
 
-## Diferencial
+O V.Inc Web não substitui leitores de tela nem declara que uma página é
+acessível. Ele oferece outra forma de consultar a estrutura e acionar elementos,
+preservando HTML semântico, foco previsível e mensagens de estado para favorecer
+a interoperabilidade com tecnologias assistivas.
 
-O V.Inc Web não pretende substituir leitores de tela ou outras tecnologias assistivas. Sua proposta é funcionar como uma camada complementar de navegação, reunindo análise semântica, comandos multimodais e explicações contextuais em português brasileiro.
+A análise estrutural ocorre localmente. O texto visível da página somente é
+enviado ao serviço opcional de inteligência artificial quando o usuário solicita
+um resumo ou uma resposta. Valores de formulários não são coletados.
 
-Um exemplo de uso será a possibilidade de perguntar:
+## Estrutura do repositório
 
-> Qual é o contexto do segundo botão “Continuar”?
+- `extension`: painel lateral da extensão Manifest V3;
+- `platform`: plataforma web acessível de apresentação e documentação;
+- `supabase`: função de borda que protege a credencial do provedor de IA.
 
-A extensão deverá analisar informações próximas ao elemento, como títulos, formulários, regiões e textos relacionados, para apresentar uma resposta contextualizada.
+## Executar a extensão
 
-## Componentes
+```bash
+cd extension
+npm install
+npm run lint
+npm test
+npm run build
+```
 
-O projeto será dividido em dois componentes principais:
+Depois, abra `chrome://extensions`, ative o modo do desenvolvedor e carregue a
+pasta `extension/dist` com a opção **Carregar sem compactação**.
 
-### Extensão de navegador
+Para habilitar a IA, consulte [`extension/README.md`](extension/README.md) e
+[`supabase/README.md`](supabase/README.md).
 
-Responsável por analisar a página atual, construir um mapa semântico de seus elementos e permitir a navegação por texto, voz e teclado.
+## Executar a plataforma
 
-### Plataforma web
+```bash
+cd platform
+npm install
+npm run lint
+npm run build
+npm run dev
+```
 
-Responsável pela autenticação, documentação de uso, sincronização de preferências e histórico opcional.
+## Qualidade
+
+A extensão possui testes automatizados com Vitest para comandos, filtros,
+auditoria de acessibilidade, catálogo da IA e cache temporário. O fluxo de
+integração contínua executa lint, testes e builds a cada push ou pull request.
 
 ## Relação com o V.Inc – Voz Inclusiva
 
-O V.Inc Web é um desdobramento do V.Inc – Voz Inclusiva, aplicação desktop desenvolvida como TCC do curso Técnico em Desenvolvimento de Sistemas.
-
-Repositório do projeto [V.Inc – Voz Inclusiva](https://github.com/nicolasrocha0809-png/v-inc-tcc).
-
-Os projetos compartilham a identidade e o compromisso com a acessibilidade, mas possuem códigos-fonte, arquiteturas, objetivos, documentações e testes próprios.
-
-O V.Inc – Voz Inclusiva atua sobre recursos do computador, enquanto o V.Inc Web será direcionado à interpretação e à navegação de páginas da internet. O funcionamento do V.Inc Web não dependerá da execução ou da modificação da aplicação original.
-
-## Tecnologias previstas
-
-- React;
-- Vite;
-- JavaScript;
-- HTML e CSS;
-- Chrome Extension Manifest V3;
-- Web Speech API;
-- APIs de extensões do navegador;
-- Supabase.
-
-As tecnologias poderão ser ajustadas durante o desenvolvimento conforme as necessidades identificadas.
-
-## Situação do projeto
-
-O projeto encontra-se em fase inicial de desenvolvimento.
-
-A primeira versão terá como objetivo:
-
-1. executar como extensão em navegadores baseados em Chromium;
-2. analisar a página aberta;
-3. identificar seus principais elementos;
-4. apresentar os elementos em um painel lateral;
-5. permitir que o usuário localize e selecione um elemento.
+O V.Inc Web é um produto independente inspirado no V.Inc – Voz Inclusiva,
+aplicação desktop desenvolvida anteriormente. Os projetos compartilham a
+identidade e o compromisso com acessibilidade, mas possuem código-fonte,
+arquitetura, documentação e testes próprios.
 
 ## Autores
 
 - Hugo Oliveira da Silva
 - Eloá Khadijah Silva Amâncio de Souza
 
-## Instituição
-
 Etec Pedro Ferreira Alves — Mogi Mirim, SP.
-
-Curso Técnico em Informática para Internet.
