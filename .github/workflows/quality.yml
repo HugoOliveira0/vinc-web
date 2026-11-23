@@ -1,0 +1,71 @@
+name: Qualidade do projeto
+
+on:
+  push:
+    branches:
+      - desenvolvimento
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  extension:
+    name: Extensão
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: extension
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar lint
+        run: npm run lint
+
+      - name: Executar testes
+        run: npm test
+
+      - name: Gerar build
+        run: npm run build
+
+  platform:
+    name: Plataforma
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: platform
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar lint
+        run: npm run lint
+
+      - name: Gerar build
+        run: npm run build
