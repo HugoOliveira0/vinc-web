@@ -3,7 +3,13 @@ import { createElementCatalog } from './aiSummary'
 
 const createAnalysis = () => ({
   headingItems: [{ level: 'h1', text: 'Título principal' }],
-  linkItems: [{ text: 'Documentação' }],
+  linkItems: [{
+    text: 'Documentação',
+    destinationLabel: 'Guia do projeto',
+    domain: 'example.com',
+    section: 'Ajuda',
+    url: 'https://example.com/guia'
+  }],
   buttonItems: [{ text: 'Continuar' }],
   fieldItems: [{ label: 'E-mail', type: 'email' }],
   imageItems: [{ description: 'Logotipo do projeto' }]
@@ -15,7 +21,13 @@ describe('createElementCatalog', () => {
 
     expect(catalog).toEqual({
       heading: [{ index: 1, label: 'H1: Título principal' }],
-      link: [{ index: 1, label: 'Documentação' }],
+      link: [{
+        index: 1,
+        label: 'Documentação',
+        details:
+          'destino identificado: Guia do projeto; domínio: example.com; ' +
+          'seção: Ajuda; URL: https://example.com/guia'
+      }],
       button: [{ index: 1, label: 'Continuar' }],
       field: [{ index: 1, label: 'E-mail (email)' }],
       image: [{ index: 1, label: 'Logotipo do projeto' }]

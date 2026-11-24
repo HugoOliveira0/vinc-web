@@ -97,6 +97,67 @@ export const collectPageData = () => {
         return getLinkAccessibleName(link) || 'Link sem descrição'
     }
 
+    const getLinkDestinationLabel = (link) => {
+        const currentLabel = getLinkAccessibleName(link)
+        const title = normalizeText(link.getAttribute('title'))
+
+        if (title && title !== currentLabel) {
+            return title
+        }
+
+        const href = link.getAttribute('href') || ''
+
+        if (href.startsWith('#')) {
+            const target = document.getElementById(
+                decodeURIComponent(href.slice(1))
+            )
+            const targetText = target ? getElementText(target) : ''
+
+            if (targetText && targetText !== currentLabel) {
+                return targetText
+            }
+        }
+
+        try {
+            const url = new URL(link.href, document.baseURI)
+            const pathPart = decodeURIComponent(
+                url.pathname.split('/').filter(Boolean).at(-1) || ''
+            )
+                .replace(/[-_]+/g, ' ')
+                .trim()
+
+            return pathPart && pathPart !== currentLabel ? pathPart : ''
+        } catch {
+            return ''
+        }
+    }
+
+    const getLinkContext = (link) => {
+        const container = link.closest(
+            'li, td, th, figcaption, figure, article, section, nav'
+        )
+        const context = container ? getElementText(container) : ''
+
+        if (!context || context === getLinkAccessibleName(link)) {
+            return ''
+        }
+
+        return context.slice(0, 240)
+    }
+
+    const getLinkSection = (link) => {
+        const previousHeadings = headingElements.filter((heading) => {
+            return Boolean(
+                heading.compareDocumentPosition(link) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+            )
+        })
+
+        return previousHeadings.length > 0
+            ? getElementText(previousHeadings.at(-1)).slice(0, 160)
+            : ''
+    }
+
     const linkElements = allLinks.filter((link) => {
         return isVisible(link) && getLinkText(link)
     })
@@ -249,6 +310,16 @@ export const collectPageData = () => {
                 id: link.dataset.vincLinkId,
                 text: getLinkText(link),
                 url: link.href,
+                domain: (() => {
+                    try {
+                        return new URL(link.href, document.baseURI).hostname
+                    } catch {
+                        return ''
+                    }
+                })(),
+                destinationLabel: getLinkDestinationLabel(link),
+                context: getLinkContext(link),
+                section: getLinkSection(link),
                 hasAccessibleName: Boolean(getLinkAccessibleName(link))
             })),
 

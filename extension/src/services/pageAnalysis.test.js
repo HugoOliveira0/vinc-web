@@ -65,6 +65,22 @@ describe('collectPageData', () => {
     ])
   })
 
+  it('coleta destino e contexto para explicar links pouco descritivos', () => {
+    document.body.innerHTML = `
+      <h2>Escala geológica</h2>
+      <p>Períodos: <a href="/wiki/Siluriano" title="Siluriano">S</a></p>
+    `
+
+    const result = collectPageData()
+
+    expect(result.linkItems[0]).toEqual(expect.objectContaining({
+      text: 'S',
+      destinationLabel: 'Siluriano',
+      domain: 'localhost',
+      section: 'Escala geológica'
+    }))
+  })
+
   it('resolve nomes de botões por SVG e preserva botões sem nome', () => {
     document.body.innerHTML = `
       <button><svg><title>Abrir menu</title></svg></button>

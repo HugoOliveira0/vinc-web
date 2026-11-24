@@ -6,13 +6,30 @@ const getConfiguration = () => ({
 const maxItemsPerCategory = 30
 const maxLabelLength = 180
 
-const normalizeCatalogItems = (items, getLabel) => {
+const maxDetailsLength = 500
+
+const normalizeCatalogItems = (items, getLabel, getDetails = () => '') => {
   return items
     .slice(0, maxItemsPerCategory)
-    .map((item, itemIndex) => ({
-      index: itemIndex + 1,
-      label: getLabel(item).slice(0, maxLabelLength)
-    }))
+    .map((item, itemIndex) => {
+      const details = getDetails(item).slice(0, maxDetailsLength)
+
+      return {
+        index: itemIndex + 1,
+        label: getLabel(item).slice(0, maxLabelLength),
+        ...(details && { details })
+      }
+    })
+}
+
+const getLinkDetails = (item) => {
+  return [
+    item.destinationLabel && `destino identificado: ${item.destinationLabel}`,
+    item.domain && `domínio: ${item.domain}`,
+    item.section && `seção: ${item.section}`,
+    item.context && `contexto próximo: ${item.context}`,
+    item.url && `URL: ${item.url}`
+  ].filter(Boolean).join('; ')
 }
 
 export const createElementCatalog = (analysis) => ({
@@ -22,7 +39,8 @@ export const createElementCatalog = (analysis) => ({
   ),
   link: normalizeCatalogItems(
     analysis.linkItems,
-    (item) => item.text
+    (item) => item.text,
+    getLinkDetails
   ),
   button: normalizeCatalogItems(
     analysis.buttonItems,

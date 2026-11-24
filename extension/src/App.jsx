@@ -43,6 +43,7 @@ import {
   loadPreferences,
   savePreferences
 } from './services/preferences'
+import { answerPageQuestionLocally } from './services/localPageAnswer'
 import {
   createSpeechRecognition,
   getRecognitionErrorMessage,
@@ -749,14 +750,32 @@ function App() {
       return
     }
 
-    if (!isAISummaryConfigured()) {
-      setStatus('O serviço de IA ainda não foi configurado.')
-      return
-    }
-
     const tab = await getActiveAnalyzedTab()
 
     if (!tab) {
+      return
+    }
+
+    const localAnswer = answerPageQuestionLocally(
+      analysis,
+      normalizedQuestion
+    )
+
+    if (localAnswer) {
+      setPageQuestionHistory((currentHistory) => [
+        ...currentHistory,
+        {
+          question: normalizedQuestion,
+          ...localAnswer
+        }
+      ].slice(-5))
+      setPageQuestion('')
+      setStatus('Resposta obtida diretamente da análise local.')
+      return
+    }
+
+    if (!isAISummaryConfigured()) {
+      setStatus('O serviço de IA ainda não foi configurado.')
       return
     }
 
