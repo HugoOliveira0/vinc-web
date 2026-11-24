@@ -1,4 +1,4 @@
-const collectPageData = () => {
+export const collectPageData = () => {
     const maxItemsPerCategory = 100
 
     const allHeadings = [
@@ -29,12 +29,45 @@ const collectPageData = () => {
         )
     }
 
+    const normalizeText = (text) => {
+        return (text || '').replace(/\s+/g, ' ').trim()
+    }
+
+    const getElementText = (element) => {
+        return normalizeText(element.innerText || element.textContent)
+    }
+
+    const getReferencedText = (element, attribute) => {
+        return normalizeText(
+            (element.getAttribute(attribute) || '')
+                .split(/\s+/)
+                .filter(Boolean)
+                .map((id) => document.getElementById(id)?.textContent || '')
+                .join(' ')
+        )
+    }
+
+    const getEmbeddedGraphicText = (element) => {
+        const imageText = [...element.querySelectorAll('img[alt]')]
+            .map((image) => image.getAttribute('alt'))
+            .map(normalizeText)
+            .filter(Boolean)
+            .join(' ')
+
+        const svgTitle = [...element.querySelectorAll('svg title')]
+            .map((title) => getElementText(title))
+            .filter(Boolean)
+            .join(' ')
+
+        return normalizeText(`${imageText} ${svgTitle}`)
+    }
+
     allHeadings.forEach((heading) => {
         heading.removeAttribute('data-vinc-heading-id')
     })
 
     const headingElements = allHeadings.filter((heading) => {
-        return isVisible(heading) && heading.innerText.trim()
+        return isVisible(heading) && getElementText(heading)
     })
 
     headingElements.forEach((heading, index) => {
@@ -51,8 +84,10 @@ const collectPageData = () => {
 
     const getLinkAccessibleName = (link) => {
         return (
-            link.innerText.trim() ||
+            getReferencedText(link, 'aria-labelledby') ||
             link.getAttribute('aria-label')?.trim() ||
+            getElementText(link) ||
+            getEmbeddedGraphicText(link) ||
             link.getAttribute('title')?.trim() ||
             ''
         )
@@ -82,10 +117,12 @@ const collectPageData = () => {
 
     const getButtonAccessibleName = (button) => {
         return (
-            button.innerText?.trim() ||
+            getReferencedText(button, 'aria-labelledby') ||
             button.getAttribute('aria-label')?.trim() ||
-            button.getAttribute('title')?.trim() ||
+            getElementText(button) ||
+            getEmbeddedGraphicText(button) ||
             button.value?.trim() ||
+            button.getAttribute('title')?.trim() ||
             ''
         )
     }
@@ -114,20 +151,19 @@ const collectPageData = () => {
 
     const getFieldAccessibleLabel = (field) => {
         const labelText = [...(field.labels || [])]
-            .map((label) => label.innerText.trim())
+            .map((label) => getElementText(label))
             .filter(Boolean)
             .join(' ')
 
-        const labelledByText = (field.getAttribute('aria-labelledby') || '')
-            .split(/\s+/)
-            .map((id) => document.getElementById(id)?.innerText.trim())
-            .filter(Boolean)
-            .join(' ')
+        const labelledByText = getReferencedText(
+            field,
+            'aria-labelledby'
+        )
 
         return (
-            labelText ||
-            field.getAttribute('aria-label')?.trim() ||
             labelledByText ||
+            field.getAttribute('aria-label')?.trim() ||
+            labelText ||
             ''
         )
     }
@@ -202,7 +238,7 @@ const collectPageData = () => {
             .map((heading) => ({
                 id: heading.dataset.vincHeadingId,
                 level: heading.tagName.toLowerCase(),
-                text: heading.innerText.trim()
+                text: getElementText(heading)
             })),
 
         links: linkElements.length,
@@ -250,8 +286,12 @@ const collectPageData = () => {
                 decorative:
                     image.hasAttribute('alt') &&
                     !image.getAttribute('alt')?.trim(),
-                width: image.naturalWidth,
-                height: image.naturalHeight
+                width: image.naturalWidth || Math.round(
+                    image.getBoundingClientRect().width
+                ),
+                height: image.naturalHeight || Math.round(
+                    image.getBoundingClientRect().height
+                )
             }))
     }
 }
