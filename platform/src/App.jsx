@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AccountPortal from './components/AccountPortal'
 
 const features = [
   {
@@ -40,6 +41,11 @@ const features = [
     number: '08',
     title: 'Resumo e perguntas com IA',
     text: 'Processa o texto visível somente quando o usuário solicita e referencia itens da análise.'
+  },
+  {
+    number: '09',
+    title: 'Conta e sincronização opcional',
+    text: 'Permite salvar preferências na conta e recuperá-las na extensão mediante ação explícita.'
   }
 ]
 
@@ -106,6 +112,7 @@ function App() {
           <a href="#recursos" onClick={closeMenu}>Recursos</a>
           <a href="#funcionamento" onClick={closeMenu}>Como funciona</a>
           <a href="#comandos" onClick={closeMenu}>Comandos</a>
+          <a href="#conta" onClick={closeMenu}>Conta</a>
           <a href="#instalacao" onClick={closeMenu}>Instalação</a>
         </nav>
       </header>
@@ -298,6 +305,24 @@ function App() {
               </p>
             </article>
           </div>
+        </section>
+
+        <section
+          className="section account-section"
+          id="conta"
+          aria-labelledby="account-title"
+        >
+          <div className="section-intro">
+            <p className="eyebrow">Conta opcional</p>
+            <h2 id="account-title">Preferências sob o seu controle</h2>
+            <p>
+              A mesma conta pode guardar tema, escala de texto e redução de
+              movimento. A sincronização não acontece em segundo plano e os
+              recursos locais da extensão continuam funcionando sem login.
+            </p>
+          </div>
+
+          <AccountPortal />
         </section>
 
         <section className="section install-section" id="instalacao" aria-labelledby="install-title">

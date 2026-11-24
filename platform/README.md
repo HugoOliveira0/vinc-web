@@ -1,16 +1,26 @@
-# React + Vite
+# Plataforma V.Inc Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Site acessível de apresentação, documentação e conta opcional do V.Inc Web.
 
-Currently, two official plugins are available:
+## Desenvolvimento
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run lint
+npm run build
+```
 
-## React Compiler
+## Conta e preferências
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Copie `.env.example` para `.env` e informe a URL e a chave pública do mesmo
+projeto Supabase utilizado pela extensão:
 
-## Expanding the ESLint configuration
+```env
+VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SUA_CHAVE_PUBLICA
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+A plataforma permite criar uma conta, entrar e alterar tema, escala de texto e
+redução de movimento. Esses dados são gravados somente quando o usuário
+seleciona o botão de salvar. A tabela `user_preferences` usa Row Level Security,
+de modo que cada conta acessa somente o próprio registro.

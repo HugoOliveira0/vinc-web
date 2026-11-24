@@ -23,9 +23,10 @@ A extensão já oferece:
 - cache temporário de resumos e respostas por página.
 
 A plataforma web apresenta o produto, seus recursos, comandos e instruções de
-instalação. Autenticação e sincronização consentida de preferências ainda
-estão planejadas. A descrição visual multimodal de imagens permanece como
-evolução futura.
+instalação. Ela também oferece autenticação opcional e permite consultar ou
+salvar, mediante ação explícita, as mesmas preferências que a extensão pode
+recuperar. A descrição visual multimodal de imagens permanece como evolução
+futura.
 
 ## Princípios
 
@@ -69,6 +70,10 @@ npm run lint
 npm run build
 npm run dev
 ```
+
+Para habilitar a conta na plataforma, copie `platform/.env.example` para
+`platform/.env` e informe a URL e a chave pública do mesmo projeto Supabase
+utilizado pela extensão. A plataforma continua acessível sem autenticação.
 
 ## Qualidade
 
