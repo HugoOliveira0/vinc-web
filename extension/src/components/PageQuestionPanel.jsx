@@ -30,7 +30,7 @@ function PageQuestionPanel({
           <h2 id="page-question-title">Pergunte sobre esta página</h2>
         </div>
 
-        <span className="ai-badge">IA</span>
+        <span className="ai-badge" aria-hidden="true">IA</span>
       </div>
 
       <p id="page-question-description" className="page-question-note">
@@ -83,7 +83,12 @@ function PageQuestionPanel({
       )}
 
       {history.length > 0 && (
-        <div className="page-question-history" aria-live="polite">
+        <div
+          className="page-question-history"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-relevant="additions text"
+        >
           <h3>Respostas desta página</h3>
 
           {history.map((entry, entryIndex) => (

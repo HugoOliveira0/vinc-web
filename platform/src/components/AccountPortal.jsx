@@ -188,14 +188,14 @@ function AccountPortal() {
   }
 
   return (
-    <div className="account-portal">
+    <div className="account-portal" aria-busy={isLoading}>
       {!configured ? (
         <p className="account-note" role="note">
           A conta não está configurada nesta compilação. A plataforma e os
           recursos locais da extensão continuam disponíveis sem autenticação.
         </p>
       ) : isLoading && !session ? (
-        <p role="status">Carregando conta...</p>
+        <p role="status" aria-atomic="true">Carregando conta...</p>
       ) : session ? (
         <div className="account-session">
           <p>
@@ -289,6 +289,7 @@ function AccountPortal() {
             <input
               id="account-password"
               type="password"
+              aria-describedby="account-password-description"
               autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
               minLength={6}
               value={password}
@@ -296,6 +297,10 @@ function AccountPortal() {
               required
             />
           </label>
+
+          <p id="account-password-description" className="field-hint">
+            Use pelo menos seis caracteres.
+          </p>
 
           <div className="account-actions">
             <button className="primary-action" type="submit" disabled={isLoading}>
@@ -317,7 +322,11 @@ function AccountPortal() {
         </form>
       )}
 
-      {status && <p className="account-status" role="status">{status}</p>}
+      {status && (
+        <p className="account-status" role="status" aria-atomic="true">
+          {status}
+        </p>
+      )}
     </div>
   )
 }

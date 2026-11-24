@@ -155,7 +155,7 @@ function AccountSyncPanel({ preferences, onApplyPreferences }) {
   }
 
   return (
-    <details className="account-sync">
+    <details className="account-sync" aria-busy={isLoading}>
       <summary>Conta e sincronização opcional</summary>
 
       <div className="account-sync-content">
@@ -165,7 +165,7 @@ function AccountSyncPanel({ preferences, onApplyPreferences }) {
             recursos locais continuam disponíveis normalmente.
           </p>
         ) : isLoading && !session ? (
-          <p role="status">Carregando conta...</p>
+          <p role="status" aria-atomic="true">Carregando conta...</p>
         ) : session ? (
           <div className="account-session">
             <p>
@@ -213,6 +213,7 @@ function AccountSyncPanel({ preferences, onApplyPreferences }) {
               <input
                 id="account-password"
                 type="password"
+                aria-describedby="account-password-description"
                 autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
                 minLength={6}
                 value={password}
@@ -220,6 +221,10 @@ function AccountSyncPanel({ preferences, onApplyPreferences }) {
                 required
               />
             </label>
+
+            <p id="account-password-description" className="field-hint">
+              Use pelo menos seis caracteres.
+            </p>
 
             <button type="submit" disabled={isLoading}>
               {mode === 'sign-up' ? 'Criar conta' : 'Entrar'}
@@ -242,7 +247,11 @@ function AccountSyncPanel({ preferences, onApplyPreferences }) {
           </form>
         )}
 
-        {status && <p className="account-status" role="status">{status}</p>}
+        {status && (
+          <p className="account-status" role="status" aria-atomic="true">
+            {status}
+          </p>
+        )}
       </div>
     </details>
   )

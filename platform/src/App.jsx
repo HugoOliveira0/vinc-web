@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AccountPortal from './components/AccountPortal'
 
 const features = [
@@ -60,11 +60,13 @@ const commands = [
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuButtonRef = useRef(null)
 
   useEffect(() => {
     const closeMenuWithEscape = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && menuOpen) {
         setMenuOpen(false)
+        menuButtonRef.current?.focus()
       }
     }
 
@@ -73,7 +75,7 @@ function App() {
     return () => {
       document.removeEventListener('keydown', closeMenuWithEscape)
     }
-  }, [])
+  }, [menuOpen])
 
   const closeMenu = () => setMenuOpen(false)
 
@@ -90,6 +92,7 @@ function App() {
         </a>
 
         <button
+          ref={menuButtonRef}
           className="nav-toggle"
           type="button"
           aria-expanded={menuOpen}

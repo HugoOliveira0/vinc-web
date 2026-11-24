@@ -252,6 +252,11 @@ code { color: var(--attention); font-family: "Cascadia Code", Consolas, monospac
   gap: 1.25rem;
 }
 
+.field-hint {
+  margin: -0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
 .account-form label,
 .preference-form label {
   display: grid;

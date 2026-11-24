@@ -23,7 +23,7 @@ function AISummaryPanel({
           <h2 id="ai-summary-title">Resumo contextual</h2>
         </div>
 
-        <span className="ai-badge">IA</span>
+        <span className="ai-badge" aria-hidden="true">IA</span>
       </div>
 
       <p className="ai-privacy-note">

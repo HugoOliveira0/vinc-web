@@ -162,10 +162,28 @@ const locateElementInPage = (
         block: 'center'
     })
 
-    if (shouldFocus) {
+    const isHeading = /^H[1-6]$/.test(selectedElement.tagName)
+    const isNamedImage =
+        selectedElement.tagName === 'IMG' &&
+        Boolean(selectedElement.getAttribute('alt')?.trim())
+    const needsTemporaryTabIndex =
+        !selectedElement.hasAttribute('tabindex') &&
+        (isHeading || isNamedImage)
+
+    if (shouldFocus || isHeading || isNamedImage) {
+        if (needsTemporaryTabIndex) {
+            selectedElement.setAttribute('tabindex', '-1')
+        }
+
         selectedElement.focus({
             preventScroll: true
         })
+
+        if (needsTemporaryTabIndex) {
+            window.setTimeout(() => {
+                selectedElement.removeAttribute('tabindex')
+            }, 0)
+        }
     }
 
     window.setTimeout(() => {

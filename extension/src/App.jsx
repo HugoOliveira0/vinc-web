@@ -1348,7 +1348,9 @@ function App() {
         {analysis ? 'Analisar novamente' : 'Analisar página'}
       </button>
 
-      <p className="status-message" role="status">{status}</p>
+      <p className="status-message" role="status" aria-atomic="true">
+        {status}
+      </p>
 
       {analysis && (
         <div
