@@ -78,7 +78,8 @@ utilizado pela extensão. A plataforma continua acessível sem autenticação.
 ## Qualidade
 
 A extensão possui testes automatizados com Vitest para comandos, filtros,
-auditoria de acessibilidade, catálogo da IA e cache temporário. O fluxo de
+auditoria de acessibilidade, catálogo da IA, cache temporário e sincronização.
+A plataforma testa a conversão das preferências compartilhadas. O fluxo de
 integração contínua executa lint, testes e builds a cada push ou pull request.
 
 ## Relação com o V.Inc – Voz Inclusiva

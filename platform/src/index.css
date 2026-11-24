@@ -271,12 +271,6 @@ code { color: var(--attention); font-family: "Cascadia Code", Consolas, monospac
   background: var(--background);
 }
 
-.preference-form input[type="range"] {
-  width: 100%;
-  min-height: 44px;
-  accent-color: var(--accent);
-}
-
 .preference-form .checkbox-label {
   display: flex;
   align-items: center;

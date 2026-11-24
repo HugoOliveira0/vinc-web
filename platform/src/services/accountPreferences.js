@@ -2,9 +2,23 @@ import { getSupabaseClient } from './supabaseClient'
 
 export const defaultAccountPreferences = {
   theme: 'system',
-  textScale: 1,
+  textScale: 'normal',
   reduceMotion: false
 }
+
+export const toRemotePreferences = (userId, preferences) => ({
+  user_id: userId,
+  theme: preferences.theme,
+  text_scale: preferences.textScale,
+  reduce_motion: preferences.reduceMotion,
+  updated_at: new Date().toISOString()
+})
+
+export const fromRemotePreferences = (preferences) => ({
+  theme: preferences.theme,
+  textScale: preferences.text_scale,
+  reduceMotion: preferences.reduce_motion
+})
 
 export const getAccountSession = async () => {
   const { data, error } = await getSupabaseClient().auth.getSession()
@@ -73,23 +87,13 @@ export const loadAccountPreferences = async (userId) => {
     return null
   }
 
-  return {
-    theme: data.theme,
-    textScale: data.text_scale,
-    reduceMotion: data.reduce_motion
-  }
+  return fromRemotePreferences(data)
 }
 
 export const saveAccountPreferences = async (userId, preferences) => {
   const { error } = await getSupabaseClient()
     .from('user_preferences')
-    .upsert({
-      user_id: userId,
-      theme: preferences.theme,
-      text_scale: preferences.textScale,
-      reduce_motion: preferences.reduceMotion,
-      updated_at: new Date().toISOString()
-    }, {
+    .upsert(toRemotePreferences(userId, preferences), {
       onConflict: 'user_id'
     })
 

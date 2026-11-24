@@ -224,21 +224,18 @@ function AccountPortal() {
             </label>
 
             <label htmlFor="account-text-scale">
-              Escala do texto: {Math.round(preferences.textScale * 100)}%
-              <input
+              Tamanho do texto
+              <select
                 id="account-text-scale"
-                type="range"
-                min="0.9"
-                max="1.4"
-                step="0.1"
                 value={preferences.textScale}
                 onChange={(event) => {
-                  handlePreferenceChange(
-                    'textScale',
-                    Number(event.target.value)
-                  )
+                  handlePreferenceChange('textScale', event.target.value)
                 }}
-              />
+              >
+                <option value="normal">Padrão</option>
+                <option value="large">Grande</option>
+                <option value="extra-large">Muito grande</option>
+              </select>
             </label>
 
             <label className="checkbox-label" htmlFor="account-reduce-motion">

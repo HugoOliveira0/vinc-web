@@ -7,6 +7,7 @@ Site acessível de apresentação, documentação e conta opcional do V.Inc Web.
 ```bash
 npm install
 npm run lint
+npm test
 npm run build
 ```
 
