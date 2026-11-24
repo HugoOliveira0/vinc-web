@@ -16,11 +16,21 @@ export const requestMicrophonePermission = async () => {
     )
   }
 
-  const permission = await navigator.permissions.query({
-    name: 'microphone'
-  })
+  let permissionState
 
-  if (permission.state === 'granted') {
+  try {
+    const permission = await navigator.permissions?.query({
+      name: 'microphone'
+    })
+
+    permissionState = permission?.state || 'prompt'
+  } catch {
+    // Alguns navegadores expõem a Permissions API, mas não aceitam
+    // consultas para microfone em páginas de extensão.
+    permissionState = 'prompt'
+  }
+
+  if (permissionState === 'granted') {
     return true
   }
 
